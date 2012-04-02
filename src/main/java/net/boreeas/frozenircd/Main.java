@@ -1,16 +1,22 @@
 package net.boreeas.frozenircd;
 
 /**
- * This class controls the startup of the IRCd
+ * This class controls the startup of the IRCd.
  * @author malte
  */
-public class Main {
+public final class Main {
 
     /**
-     * Program entry point
+     * No instantiation.
+     */
+    private Main() {
+    }
+
+    /**
+     * Program entry point.
      * @param args The command line arguments
      */
-    public static void main(String[] args) {
+    public static void main(final String[] args) {
         System.out.println("Hello World!");
     }
 }
