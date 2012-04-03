@@ -15,10 +15,48 @@
  */
 package net.boreeas.frozenircd;
 
+import java.util.Set;
+
 /**
  * Represents the Server.
  * @author Boreeas
  */
-public class Server {
+public final class Server {
     
+    /**
+     * The set of all servers linked to this server.
+     */
+    private Set<Server> linkedServers;
+    
+    /**
+     * The set of all clients currently attached to this server.
+     */
+    private Set<Client> attachedClients;
+    
+    /**
+     * The server instance.
+     */
+    private static Server instance;
+    
+    /**
+     * Singleton constructor.
+     */
+    private Server() {
+        
+        // Singleton
+    }
+    
+    /**
+     * Returns the running server instance. Will create a new server if none exists.
+     * @return The running server instance.
+     */
+    public static synchronized Server getServer() {
+        
+        if (instance == null) {
+            
+            instance = new Server();
+        }
+        
+        return instance;
+    }
 }
