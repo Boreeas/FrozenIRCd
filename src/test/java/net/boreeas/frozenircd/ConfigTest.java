@@ -15,6 +15,7 @@
  */
 package net.boreeas.frozenircd;
 
+import net.boreeas.frozenircd.config.Config;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -45,9 +46,7 @@ public class ConfigTest extends TestCase {
         
         try {
             config.load();
-            fail("Config should not be loaded");
-        } catch (FileNotFoundException nfe) {
-            // Success
+            assertTrue("Empty config file not loaded empty", config.isEmpty());
         } catch (IOException ioe) {
             // So we can continue
         }

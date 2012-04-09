@@ -16,22 +16,10 @@
 package net.boreeas.frozenircd;
 
 /**
- * Indicates an illegal format in an input.
+ *
  * @author Boreeas
  */
-public class IllegalFormatException extends Exception {
-
-    /**
-     * Creates a new instance of <code>IllegalFormatException</code> without detail message.
-     */
-    public IllegalFormatException() {
-    }
-
-    /**
-     * Constructs an instance of <code>IllegalFormatException</code> with the specified detail message.
-     * @param msg the detail message.
-     */
-    public IllegalFormatException(String msg) {
-        super(msg);
-    }
+public interface InputHandler {
+    
+    public void onInput(Connection connection, String input);
 }

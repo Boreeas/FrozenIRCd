@@ -17,6 +17,7 @@ public final class Main {
      * @param args The command line arguments
      */
     public static void main(final String[] args) {
-        System.out.println("Hello World!");
+        
+        Server server = Server.getServer();
     }
 }

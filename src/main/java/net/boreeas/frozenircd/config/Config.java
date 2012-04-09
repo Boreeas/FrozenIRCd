@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.boreeas.frozenircd;
+package net.boreeas.frozenircd.config;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -73,7 +73,7 @@ public class Config {
      * @throws IOException If an IOException occurred while reading the file
      * @throws IllegalFormatException If any non-comment, non-empty line contains only a name or a value
      */
-    public void load() throws FileNotFoundException, IOException, IllegalFormatException {
+    public void load() throws IOException {
         
         //We are reloading from the disk, so remove everything to prevent old entries
         clear();
@@ -83,9 +83,18 @@ public class Config {
             return; // We are done
         }
         
-        BufferedReader reader = new BufferedReader(new FileReader(backend));
-        
+        BufferedReader reader = null;
         String input = null;
+        
+        try {
+            
+            reader = new BufferedReader(new FileReader(backend));
+        } catch (FileNotFoundException nfe) {
+            
+            SharedData.logger.warning(String.format("Unable to read config input file: %s", backend));
+            return;
+        }
+        
         while ((input = reader.readLine()) != null) {
             input = input.trim();
             
@@ -97,7 +106,8 @@ public class Config {
             
             if (parts.length < 2) {
                 
-                throw new IllegalFormatException(String.format("Missing field.name or field.value: %s", input));
+                SharedData.logger.warning(String.format("Encountered incomplete line %s in config file %s, ignoring", input, backend));
+                continue;   //Skip incomplete lines
             }
             
             String[] values = parts[1].trim().split(FIELD_SEPARATOR);    //TODO Split not by escaped separator
@@ -167,14 +177,16 @@ public class Config {
             }
         }
         
-        //Add any modified keys
-        fileData.add("");
-        fileData.add(String.format("# Saved on %s", new Date()));
-        for (Entry<String, String[]> entry: fields.entrySet()) {
-            
-            if (!savedKeys.contains(entry.getKey())) {
-                
-                fileData.add(String.format("%s = %s", entry.getKey(), toConfigString(entry.getValue())));
+        //Add any not existing keys
+        if (fields.size() > savedKeys.size()) {
+            fileData.add("");
+            fileData.add(String.format("# Saved on %s", new Date()));
+
+            for (Entry<String, String[]> entry: fields.entrySet()) {
+
+                if (!savedKeys.contains(entry.getKey())) {
+                    fileData.add(String.format("%s = %s", entry.getKey(), toConfigString(entry.getValue())));
+                }
             }
         }
         
