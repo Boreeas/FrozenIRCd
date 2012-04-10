@@ -24,5 +24,6 @@ public interface Interruptable {
     /**
      * Requests that the current loop may be stopped
      */
-    public void interrupt();
+    public void requestInterrupt();
+    
 }

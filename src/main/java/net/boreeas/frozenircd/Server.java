@@ -30,7 +30,7 @@ import java.util.logging.Level;
  * Represents the Server.
  * @author Boreeas
  */
-public final class Server extends Thread implements Interruptable {
+public final class Server {
     
     
     
@@ -63,7 +63,7 @@ public final class Server extends Thread implements Interruptable {
         
         Config config = SharedData.getConfig();
         
-        if (config.get("port") == null) {
+        if (config.get(SharedData.CONFIG_KEY_PORT) == null) {
             
             throw new IncompleteConfigurationException("Missing port");
         }
@@ -78,7 +78,9 @@ public final class Server extends Thread implements Interruptable {
         }
         
         
-        if (config.get("hostname") == null || config.get("token") == null || config.get("description") == null) {
+        if (config.get(SharedData.CONFIG_KEY_HOST) == null 
+                || config.get(SharedData.CONFIG_KEY_TOKEN) == null 
+                || config.get(SharedData.CONFIG_KEY_DESCRIPTION) == null) {
             
             throw new IncompleteConfigurationException("Missing hostname, token or description");
         }
@@ -86,25 +88,28 @@ public final class Server extends Thread implements Interruptable {
         linkServers();
     }
     
-    @Override
-    public void run() {
+    public void startListeners() {
         
-        while (!interrupted) {
+        for (String port: SharedData.getConfig().get(SharedData.CONFIG_KEY_PORT)) {
             
-            if (serverSocket == null) {
-                
-                SharedData.logger.warning("No server socket active, stopping");
-                break;
+            boolean useSSL = false;
+            if (port.startsWith("+")) {
+                // +[port] indicates an SSL port
+                useSSL = true;
+                port = port.substring(1);
             }
+            
+            if (!port.matches("[0-9]+")) {
+                SharedData.logger.log(Level.SEVERE, "Invalid port entry: Not an integer: {0} (Skipping)", port);
+                continue;
+            }
+            
             try {
-                Socket socket = serverSocket.accept();
-            } catch (IOException ioe) {
-                SharedData.logger.log(Level.SEVERE, "Unable to accept incoming connection", ioe);
+                (new ConnectionListener(Integer.parseInt(port), useSSL)).start();
+            } catch (IOException ex) {
+                SharedData.logger.log(Level.SEVERE, String.format("Unable to listen on port %s", port), ex);
             }
         }
-        
-        
-        close();
     }
 
     public void close() {
@@ -120,7 +125,7 @@ public final class Server extends Thread implements Interruptable {
         
         for (ServerLink link: linkedServers) {
             
-            link.interrupt();
+            link.requestInterrupt();
         }
     }
     
@@ -138,12 +143,6 @@ public final class Server extends Thread implements Interruptable {
         return instance;
     }
     
-    @Override
-    public void interrupt() {
-        
-        interrupted = true;
-    }
-    
     
 
     /**
@@ -151,7 +150,7 @@ public final class Server extends Thread implements Interruptable {
      */
     private void linkServers() {
         
-        String[] servers = SharedData.getConfig().get("links");
+        String[] servers = SharedData.getConfig().get(SharedData.CONFIG_KEY_LINKS);
         
         if (servers == null) {
             
@@ -168,7 +167,8 @@ public final class Server extends Thread implements Interruptable {
                 String password = (data.length >= 3) ? data[2] : data[1];
 
                 ServerLink newLink = new ServerLink(host, port, password);
-                linkedServers.add(newLink);
+                newLink.addHandler(SharedData.serverLinkInputHandler);
+                SharedData.serverPool.addConnection(host, newLink);
             } catch (ArrayIndexOutOfBoundsException oobe) {
                 
                 // We did not get enough arguments to complete the connection

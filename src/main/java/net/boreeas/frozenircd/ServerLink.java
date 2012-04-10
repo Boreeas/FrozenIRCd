@@ -15,7 +15,6 @@
  */
 package net.boreeas.frozenircd;
 
-import java.util.logging.Logger;
 import net.boreeas.frozenircd.config.Config;
 import net.boreeas.frozenircd.config.SharedData;
 import java.io.BufferedReader;
@@ -59,8 +58,10 @@ public class ServerLink extends Thread implements Interruptable, Connection {
         
         Config config = SharedData.getConfig();
         
-        writer.write(String.format("PASS %1s %2s%3s IRC|%3s", password, SharedData.PROTOCOL_VERSION, SharedData.BUILD_IDENTIFIER));
-        writer.write(String.format("SERVER %s 1 %s : %s", config.get("hostname"), config.get("token"), config.get("description")));
+        send(String.format("PASS %1s %2s%3s IRC|%3s", password, SharedData.PROTOCOL_VERSION, SharedData.BUILD_IDENTIFIER));
+        send(String.format("SERVER %s 1 %s : %s", config.get(SharedData.CONFIG_KEY_HOST), 
+                                                          config.get(SharedData.CONFIG_KEY_TOKEN), 
+                                                          config.get(SharedData.CONFIG_KEY_DESCRIPTION)));
     }
 
     @Override
@@ -122,20 +123,21 @@ public class ServerLink extends Thread implements Interruptable, Connection {
     }
 
     @Override
-    public void interrupt() {
+    public void requestInterrupt() {
         
         interrupted = true;
     }
 
     @Override
-    public void send(String line) {
+    public final void send(String line) {
         
         try {
-            writer.write(line);
+            SharedData.logger.log(Level.parse("0"), line);
+            writer.write(line + "\r\n");
             writer.flush();
         } catch (IOException ioe) {
             
-            interrupt();    // An ioe indicates a closed stream
+            requestInterrupt();    // An ioe indicates a closed stream
             SharedData.logger.log(Level.SEVERE, String.format("Unable to write output to %s, closing link", socket.getInetAddress().getHostName()), ioe);
         }
     }
