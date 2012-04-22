@@ -38,17 +38,9 @@ public final class Server {
      * The set of all servers linked to this server.
      */
     // TODO Move this to a pool maybe
-    private Set<ServerLink> linkedServers = new CopyOnWriteArraySet<ServerLink>();
+    //private Set<ServerLink> linkedServers = new CopyOnWriteArraySet<ServerLink>();
     
-    /**
-     * The set of all clients currently attached to this server.
-     */
-    // TODO Move this to a pool maybe
-    private Set<Client> attachedClients = new HashSet<Client>();
-    
-    private ServerSocket serverSocket;
-    
-    private volatile boolean interrupted = false;
+    private Set<ConnectionListener> connectionListeners;
     
     /**
      * The server instance.
@@ -62,30 +54,31 @@ public final class Server {
     private Server() {
         
         Config config = SharedData.getConfig();
-        
-        if (config.get(SharedData.CONFIG_KEY_PORT) == null) {
-            
-            throw new IncompleteConfigurationException("Missing port");
-        }
+        checkConfig(config);
         
         int port = Integer.parseInt(config.get("port")[0]);
         SharedData.logger.log(Level.INFO, "Binding to port {0}", port);
         
-        try {
-            serverSocket = new ServerSocket(port);
-        } catch (IOException ioe) {
-            SharedData.logger.log(Level.SEVERE, "Unable to create ServerSocket, unable to accept incoming connections", ioe);
-        }
-        
-        
-        if (config.get(SharedData.CONFIG_KEY_HOST) == null 
-                || config.get(SharedData.CONFIG_KEY_TOKEN) == null 
-                || config.get(SharedData.CONFIG_KEY_DESCRIPTION) == null) {
-            
-            throw new IncompleteConfigurationException("Missing hostname, token or description");
-        }
+        connectionListeners = new HashSet<ConnectionListener>();
         
         linkServers();
+        startListeners();
+    }
+    
+    private void checkConfig(Config config) {
+        
+        if (config.get(SharedData.CONFIG_KEY_PORT) == null) 
+            throw new IncompleteConfigurationException("Missing port");
+        
+        if (config.get(SharedData.CONFIG_KEY_HOST) == null)
+            throw new IncompleteConfigurationException("Missing hostname");
+            
+        if (config.get(SharedData.CONFIG_KEY_TOKEN) == null) 
+            throw new IncompleteConfigurationException("Missing token");
+            
+        if (config.get(SharedData.CONFIG_KEY_DESCRIPTION) == null)
+            throw new IncompleteConfigurationException("Missing description");
+        
     }
     
     public void startListeners() {
@@ -105,7 +98,9 @@ public final class Server {
             }
             
             try {
-                (new ConnectionListener(Integer.parseInt(port), useSSL)).start();
+                ConnectionListener connListener = new ConnectionListener(Integer.parseInt(port), useSSL);
+                connListener.start();
+                connectionListeners.add(connListener);
             } catch (IOException ex) {
                 SharedData.logger.log(Level.SEVERE, String.format("Unable to listen on port %s", port), ex);
             }
@@ -114,19 +109,22 @@ public final class Server {
 
     public void close() {
         
-        if (serverSocket != null) {
+        SharedData.logger.log(Level.INFO, "Initiating shutdown sequence");
+        
+        for (ConnectionListener listener: connectionListeners) {
             
-            try {
-                serverSocket.close();
-            } catch (IOException ioe) {
-                SharedData.logger.log(Level.WARNING, "Unable to close server socket", ioe);
-            }
+            SharedData.logger.log(Level.INFO, "No longer accepting incoming connections");
+            
+            listener.requestInterrupt();
         }
         
-        for (ServerLink link: linkedServers) {
-            
-            link.requestInterrupt();
-        }
+        SharedData.logger.log(Level.INFO, "Disconnecting connected clients");
+        SharedData.clientPool.disconnectAll();
+        
+        SharedData.logger.log(Level.INFO, "Delinking servers");
+        SharedData.serverPool.disconnectAll();
+        
+        SharedData.logger.log(Level.INFO, "Spinning down");
     }
     
     /**
@@ -168,7 +166,7 @@ public final class Server {
 
                 ServerLink newLink = new ServerLink(host, port, password);
                 newLink.addHandler(SharedData.serverLinkInputHandler);
-                SharedData.serverPool.addConnection(host, newLink);
+                SharedData.serverPool.addConnection(newLink.getUUID(), newLink);
             } catch (ArrayIndexOutOfBoundsException oobe) {
                 
                 // We did not get enough arguments to complete the connection

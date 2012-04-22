@@ -15,11 +15,11 @@
  */
 package net.boreeas.frozenircd;
 
+import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
+import java.util.UUID;
 
 /**
  *
@@ -27,7 +27,7 @@ import java.util.Set;
  */
 public class ConnectionPool {
     
-    private Map<String, Connection> pool = new HashMap<String, Connection>();
+    private Map<UUID, Connection> pool = new HashMap<UUID, Connection>();
     
     public ConnectionPool() {
         
@@ -39,7 +39,7 @@ public class ConnectionPool {
      * @param identifier The unique identifier for the connection
      * @param connection The connection to add
      */
-    public void addConnection(String identifier, Connection connection) {
+    public void addConnection(UUID identifier, Connection connection) {
         
         pool.put(identifier, connection);
     }
@@ -49,7 +49,7 @@ public class ConnectionPool {
      * @param identifier The unique identifier for that connection
      * @return The removed connection, or <code>null</code> if none was removed
      */
-    public Connection removeConnection(String identifier) {
+    public Connection removeConnection(UUID identifier) {
         
         return pool.remove(identifier);
     }
@@ -59,7 +59,7 @@ public class ConnectionPool {
      * @param identifier The unique identifier for the connection
      * @return The associated connection
      */
-    public Connection getConnection(String identifier) {
+    public Connection getConnection(UUID identifier) {
         
         return pool.get(identifier);
     }
@@ -71,7 +71,7 @@ public class ConnectionPool {
      */
     public void broadcast(String message, Connection source) {
         
-        for (Entry<String, Connection> entry: pool.entrySet()) {
+        for (Entry<UUID, Connection> entry: pool.entrySet()) {
             
             //Do not send a message to the original target
             if (!entry.getValue().equals(source)) {
@@ -79,5 +79,21 @@ public class ConnectionPool {
                 entry.getValue().send(message);
             }
         }
+    }
+    
+    /**
+     * Disconnects all connections in this pool.
+     */
+    public void disconnectAll() {
+        
+        for (Entry<UUID, Connection> entry: pool.entrySet()) {
+            
+            entry.getValue().disconnect();
+        }
+    }
+    
+    public Collection<Connection> getConnections() {
+        
+        return pool.values();
     }
 }

@@ -21,7 +21,10 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
+import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.logging.Level;
 import net.boreeas.frozenircd.config.SharedData;
@@ -38,13 +41,26 @@ public class Client extends Thread implements Interruptable, Connection {
     private BufferedReader reader;
     private BufferedWriter writer;
     
-    private Set<InputHandler> handlers = new CopyOnWriteArraySet<InputHandler>();
+    private Set<ClientInputHandler> handlers = new CopyOnWriteArraySet<ClientInputHandler>();
     
     private volatile boolean interrupted;
+    private boolean closed;
+    
+    private Set<Character> flags = new HashSet<Character>();
+    private String username;
+    private String realname;
+    private String nickname;
+    private String hostname;
+    private boolean identdResponse = false;
+    private final UUID uuid = UUID.randomUUID();
     
     public Client(Socket socket, boolean ssl) throws IOException {
         
+        SharedData.logger.log(Level.INFO, "Client from {0} attached", socket);
+        
+        
         this.socket = socket;
+        socket.setSoTimeout(1000);
         this.ssl = ssl;
         
         reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -68,9 +84,22 @@ public class Client extends Thread implements Interruptable, Connection {
                     handler.onInput(this, input);
                 }
                 
+            } catch (SocketTimeoutException ex) {
+                continue;   //Prevent endless blocks
             } catch (IOException ex) {
-                SharedData.logger.log(Level.SEVERE, String.format("IOException while reading data from %s, closing connection.", socket.getInetAddress().getHostName()), ex);
+                
+                if (!closed) {
+                    // Ignore IOExceptions on closed connections
+                    SharedData.logger.log(Level.SEVERE, String.format("IOException while reading data from %s, closing connection.", socket.getInetAddress().getHostName()), ex);
+                }
+                
                 break;
+            }
+            
+            try {
+                sleep(50);
+            } catch (InterruptedException ex) {
+                requestInterrupt();
             }
         }
         
@@ -80,11 +109,14 @@ public class Client extends Thread implements Interruptable, Connection {
             socket.close();
         } catch (IOException ioe) {
             // Not much we can do here anyways
-            SharedData.logger.log(Level.INFO, String.format("IOException while closing streams to %s", socket.getInetAddress().getHostName()), ioe);
+            if (!closed) {
+                // Ignore IOExceptions on closed connections
+                SharedData.logger.log(Level.INFO, String.format("IOException while closing streams to %s", socket.getInetAddress().getHostName()), ioe);
+            }
         }
     }
     
-    public void addHandler(InputHandler handler) {
+    public void addHandler(ClientInputHandler handler) {
         
         handlers.add(handler);
     }
@@ -100,12 +132,56 @@ public class Client extends Thread implements Interruptable, Connection {
             
             SharedData.logger.log(Level.parse("0"), "[-> {0}] {1}", new Object[]{socket.getInetAddress(), line});
             
-            writer.write(line + "\r\n");
+            writer.write(String.format(":%s %s\r\n", SharedData.getConfig().get(SharedData.CONFIG_KEY_HOST), line));
             writer.flush();
         } catch (IOException ioe) {
             
             SharedData.logger.log(Level.SEVERE, String.format("Could not write to %s, closing connection", socket.getInetAddress()), ioe);
-            requestInterrupt();
+            disconnect(ioe.getMessage());
+        }
+    }
+    
+    public void sendWithoutPrefix(String line) {
+        
+        try {
+            
+            SharedData.logger.log(Level.parse("0"), "[-> {0}] :{1}", new Object[]{socket.getInetAddress(), line});
+            writer.write(String.format(":%s\r\n", line));
+            writer.flush();
+        } catch (IOException ioe) {
+            
+            SharedData.logger.log(Level.SEVERE, String.format("Could not write to %s, closing connection", socket.getInetAddress()), ioe);
+            disconnect(ioe.getMessage());
+        }
+    }
+    
+    public void sendNotice(String sender, String message) {
+        
+        try {
+            
+            String toSend = String.format(":%s NOTICE %s :%s", SharedData.getConfig().get(SharedData.CONFIG_KEY_HOST)[0], sender, message);
+            SharedData.logger.log(Level.parse("0"), "[-> {0}] {1}", new Object[]{socket.getInetAddress(), toSend});
+            writer.write(String.format("%s\r\n", toSend));
+            writer.flush();
+        } catch (IOException ioe) {
+            
+            SharedData.logger.log(Level.SEVERE, String.format("Could not write to %s, closing connection", socket.getInetAddress()), ioe);
+            disconnect(ioe.getMessage());
+        }
+    }
+    
+    public void sendPrivateMessage(String sender, String message) {
+        
+        try {
+            
+            String toSend = String.format(":%s PRIVMSG %s :%s", SharedData.getConfig().get(SharedData.CONFIG_KEY_HOST)[0], sender, message);
+            SharedData.logger.log(Level.parse("0"), "[-> {0}] {1}", new Object[]{socket.getInetAddress(), toSend});
+            writer.write(String.format("%s\r\n", toSend));
+            writer.flush();
+        } catch (IOException ioe) {
+            
+            SharedData.logger.log(Level.SEVERE, String.format("Could not write to %s, closing connection", socket.getInetAddress()), ioe);
+            disconnect(ioe.getMessage());
         }
     }
     
@@ -113,5 +189,143 @@ public class Client extends Thread implements Interruptable, Connection {
         
         return ssl;
     }
+    
+    /**
+     * Disconnects this client.
+     */
+    @Override
+    public void disconnect() {
+        
+        disconnect("Connection closed");
+    }
+    
+    /**
+     * Disconnects this client.
+     * @param message The message for the disconnect
+     */
+    @Override
+    public void disconnect(String message) {
+        
+        send(String.format("QUIT :%s", message));
+        requestInterrupt();
+        closed = true;
+        
+        for (ClientInputHandler handler: handlers) {
+            handler.onDisconnect(this);
+        }
+        
+        SharedData.serverPool.removeConnection(uuid);
+    }
+    
+    @Override
+    public String toString() {
+        
+        return socket.getInetAddress().toString();
+    }
+    
+    /**
+     * Tells whether a client has a certain flag
+     * @param flag The flag to check
+     * @return <code>true</code> if the client has the flag <code>flag</code>, false otherwise
+     */
+    public boolean hasFlag(char flag) {
+        
+        return flags.contains(flag);
+    }
+    
+    /**
+     * Adds a mode flag for the client and notifies all input handlers of the mode change
+     * @param flag The flag to add
+     */
+    public void addFlag(char flag) {
+        
+        flags.add(flag);
+        for (ClientInputHandler handler: handlers) {
+            
+            handler.onModeChange(this, flags());
+        }
+    }
+    
+    /**
+     * Removes a mode flag from the client and notifies all input handlers of the mode change
+     * @param flag The flag to remove
+     */
+    public void removeFlag(char flag) {
+        
+        flags.remove(flag);
+        
+        for (ClientInputHandler handler: handlers) {
+            
+            handler.onModeChange(this, flags());
+        }
+    }
+    
+    /**
+     * Returns the mode string for the client
+     * @return The mode string for the client
+     */
+    public String flags() {
+        
+        StringBuilder builder = new StringBuilder();
+        
+        for (Character character: flags) {
+            
+            builder.append(character);
+        }
+        
+        return builder.toString();
+    }
+    
+    public UUID getUUID() {
+        
+        return uuid;
+    }
+    
+    public String getRealname() {
+        return realname;
+    }
+    
+    public String getNickname() {
+        return nickname;
+    }
+    
+    public String getUsername() {
+        return username;
+    }
+    
+    public String getHostname() {
+        return hostname;
+    }
+    
+    public String getMask() {
+        return String.format("%s!%s@%s", nickname, username, hostname);
+    }
+
+    public void setNickname(String nickname) {
+        this.nickname = nickname;
+    }
+
+    public void setRealname(String realname) {
+        this.realname = realname;
+    }
+
+    public void setUsername(String username) {
+        
+        if (!identdResponse) {
+            username = "~" + username;
+        }
+        
+        this.username = username;
+    }
+    
+    public void setHostname(String hostname) {
+        this.hostname = hostname;
+    }
+    
+    public void setIdentified(boolean flag) {
+        this.identdResponse = flag;
+    }
+    
+    
     
 }

@@ -15,16 +15,24 @@
  */
 package net.boreeas.frozenircd;
 
+import java.util.logging.Level;
+import net.boreeas.frozenircd.config.SharedData;
+
 /**
  *
  * @author Boreeas
  */
-public interface InputHandler {
+public abstract class ClientInputHandler implements InputHandler {
     
-    public void onInput(Connection connection, String input);
+    public abstract void onInput(Connection connection, String input);
+    public abstract void onModeChange(Connection connection, String modeString);
     
-    public void onConnect(Connection connection);
     
-    public void onDisconnect(Connection connection);
-    
+    public void onConnect(Connection connection) {
+        SharedData.logger.log(Level.ALL, "Client {0} connected", connection);
+    }
+
+    public void onDisconnect(Connection connection) {
+        SharedData.logger.log(Level.ALL, "Client {0} disconnected", connection);
+    }
 }

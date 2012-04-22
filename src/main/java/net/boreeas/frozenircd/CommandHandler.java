@@ -19,12 +19,7 @@ package net.boreeas.frozenircd;
  *
  * @author Boreeas
  */
-public interface InputHandler {
+public interface CommandHandler {
     
-    public void onInput(Connection connection, String input);
-    
-    public void onConnect(Connection connection);
-    
-    public void onDisconnect(Connection connection);
-    
+    public void onCommand(Connection connection, String[] args, String argsAsString);
 }

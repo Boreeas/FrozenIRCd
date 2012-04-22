@@ -15,11 +15,19 @@
  */
 package net.boreeas.frozenircd;
 
+import java.util.UUID;
+
 /**
  *
  * @author Boreeas
  */
 public interface Connection {
     
-    public void send(String line);
+    public void send(String line);    
+    
+    public void disconnect();
+    
+    public void disconnect(String message);
+    
+    public UUID getUUID();
 }

@@ -17,7 +17,14 @@ package net.boreeas.frozenircd.config;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
+import net.boreeas.frozenircd.Client;
+import net.boreeas.frozenircd.ClientInputHandler;
+import net.boreeas.frozenircd.CommandHandler;
 import net.boreeas.frozenircd.Connection;
 import net.boreeas.frozenircd.ConnectionPool;
 import net.boreeas.frozenircd.InputHandler;
@@ -27,6 +34,9 @@ import net.boreeas.frozenircd.InputHandler;
  * @author Boreeas
  */
 public class SharedData {
+     
+    
+    
     
     public static final String PROTOCOL_VERSION = "0210";
     public static final String BUILD_IDENTIFIER = "frozen001a";
@@ -36,9 +46,15 @@ public class SharedData {
     public static final String CONFIG_KEY_PASS = "pass";
     public static final String CONFIG_KEY_PORT = "port";
     
+    public static final String CONFIG_KEY_NICK_LENGTH = "nicklength";
+    public static final String CONFIG_KEY_BLACKLISTED_NICKS = "nickblacklist";
+    
     public static final String CONFIG_KEY_LINKS = "links";
     public static final String CONFIG_KEY_TOKEN = "token";
     public static final String CONFIG_KEY_LINK_PASS = "linkpass";
+    
+    private static Map<String, CommandHandler> clientCommands = new HashMap<String, CommandHandler>();
+    private static Map<String, CommandHandler> serverCommands = new HashMap<String, CommandHandler>();
     
     /**
      * The public logger object to be used by every class.
@@ -52,24 +68,61 @@ public class SharedData {
 
         public void onInput(Connection connection, String input) {
             
-            // TODO implement
-            throw new UnsupportedOperationException("Not supported yet.");
+            logger.log(Level.FINEST, "[{0} ->] {1}", new Object[]{connection.toString(), input});
+        }
+
+        public void onConnect(Connection connection) {
+            
+            logger.log(Level.FINEST, "Server {0} linked", connection);
+        }
+
+        public void onDisconnect(Connection connection) {
+            
+            logger.log(Level.FINEST, "Server {0} delinked", connection);
         }
     };
     
     /**
      * The handler that takes care of client input
      */
-    public static final InputHandler clientInputHandler = new InputHandler() {
+    public static final ClientInputHandler clientInputHandler = new ClientInputHandler() {
 
         public void onInput(Connection connection, String input) {
             
-            // TODO Implement
-            throw new UnsupportedOperationException("Not supported yet.");
+            logger.log(Level.ALL, "[{0} ->] {1}", new Object[]{connection.toString(), input});
+            
+            String[] fields = input.split(" ", 2);
+            
+            if (clientCommands.containsKey(fields[0].toLowerCase())) {
+                
+                // For "x y :z" contains ["x y ", "z"]. For "" contains []. For "x y" contains ["x y"]
+                String[] toLastArg = (fields.length > 1) ? fields[1].split(":") : new String[0];
+                
+                // For "x y :z" contains ["x", "y"]. For "" contains []. For "x y" contains ["x", "y"]
+                String[] otherArgs = (toLastArg.length > 0) ? toLastArg[0].trim().split(" ") : new String[0];
+                
+                String[] argsTotal = new String[otherArgs.length + ((toLastArg.length > 1) ? 1 : 0)];
+                
+                System.arraycopy(otherArgs, 0, argsTotal, 0, otherArgs.length);
+                if (toLastArg.length > 1) {
+                    argsTotal[argsTotal.length - 1] = toLastArg[1];
+                }
+                
+                clientCommands.get(fields[0].toLowerCase()).onCommand(connection, argsTotal, (fields.length > 1) ? fields[1] : "");
+            } else {
+                
+                connection.send(String.format(ERR_UNKNOWNCOMMAND, '*', fields[0]));
+            }
+            
+            
+        }
+
+        public void onModeChange(Connection connection, String modeString) {
+            
+            // TODO Do something
         }
     };
-    
-    /**
+        /**
      * The pool of all linked servers
      */
     public static final ConnectionPool serverPool = new ConnectionPool();
@@ -85,9 +138,26 @@ public class SharedData {
      */
     private static Config config;
     
+    static {
+        logger.setLevel(Level.parse("0"));
+        Config localConfig = getConfig();
+        if (!localConfig.containsKey(CONFIG_KEY_NICK_LENGTH)) {
+            localConfig.set(CONFIG_KEY_NICK_LENGTH, "15");
+        }
+        
+        logger.log(Level.INFO, "Setting up client command map");
+        fillClientCommandMap();
+        logger.log(Level.INFO, "Setting up server command map");
+        fillServerCommandMap();
+    }
     
+    /**
+     * The pattern that nicknames must adhere to
+     */
+    public static final Pattern nickPattern = Pattern.compile("[a-zA-Z0-9_\\-\\]\\[]{1," + getConfig().get(CONFIG_KEY_NICK_LENGTH)[0] + "}");
+   
     
-    
+
     
     
     /**
@@ -119,4 +189,113 @@ public class SharedData {
         
         return config;
     }
+    
+    
+    private static void fillClientCommandMap() {
+        
+        clientCommands.put(CLIENT_COMMAND_PING, new CommandHandler() {
+
+            public void onCommand(Connection connection, String[] args, String argsAsString) {
+                
+                connection.send("PONG " + argsAsString);
+            }
+        });
+        
+        clientCommands.put(CLIENT_COMMAND_USER, new CommandHandler() {
+
+            public void onCommand(Connection connection, String[] args, String argsAsString) {
+                
+                if (!(connection instanceof Client)) {
+                    
+                    logger.log(Level.SEVERE, "{0} is not a client, but wants to be treated as such: Closing connection", connection);
+                    connection.disconnect("Not a user");
+                    return;
+                }
+                
+                Client client = (Client)connection;
+                String nickname = (client.getNickname() == null) ? "*" : client.getNickname();
+                
+                if (args.length < 4) {
+                    connection.send(String.format(ERR_NEEDMOREPARAMS, nickname, "USER", "<username> <unused> <unused> :<realname>"));
+                    return;
+                }
+                
+                if (client.getUsername() != null) {
+                    // ERR_ALREADYREGISTERED
+                    connection.send(String.format(ERR_ALREADYREGISTERED, nickname));
+                }
+                
+                client.setUsername(args[0]);
+                client.setRealname(args[3]);
+                client.addFlag('i');
+            }
+        });
+        
+        clientCommands.put(CLIENT_COMMAND_NICK, new CommandHandler() {
+
+            public void onCommand(Connection connection, String[] args, String argsAsString) {
+                
+                if (!(connection instanceof Client)) {
+                    
+                    logger.log(Level.SEVERE, "{0} is not a client, but wants to be treated as such: Closing connection", connection);
+                    connection.disconnect("Not a user");
+                    return;
+                }
+                
+                Client client = (Client)connection;
+                String nickname = (client.getNickname() == null) ? "*" : client.getNickname();
+                
+                if (args.length == 0) {
+                    
+                    connection.send(String.format(ERR_NONICKNAMEGIVEN, nickname));
+                    return;
+                }
+                
+                if (!nickPattern.matcher(args[0]).matches()) {
+                    
+                    connection.send(String.format(ERR_ERRONEUSNICKNAME, nickname, args[0], "Illegal character"));
+                    return;
+                }
+                
+                if (getConfig().get(CONFIG_KEY_BLACKLISTED_NICKS) != null) {
+                    
+                    for (String nick: getConfig().get(CONFIG_KEY_BLACKLISTED_NICKS)) {
+                        
+                        if (nick.equalsIgnoreCase(args[0])) {
+                            
+                            connection.send(String.format(ERR_ERRONEUSNICKNAME, nickname, args[0], "Illegal nickname"));
+                            return;
+                        }
+                    }
+                }
+                
+                for (Connection conn: clientPool.getConnections()) {
+                    
+                    if (conn instanceof Client && conn != connection && ((Client)conn).getUsername().equalsIgnoreCase(
+                            args[0])) {
+                        
+                        connection.send(String.format(ERR_NICKNAMEINUSE, nickname, args[0]));
+                    }
+                }
+                
+                client.setNickname(args[0]);
+            }
+        });
+    }
+    
+    private static void fillServerCommandMap() {
+        
+        
+    }
+    
+    private static final String CLIENT_COMMAND_PING = "ping";
+    private static final String CLIENT_COMMAND_USER = "user";
+    private static final String CLIENT_COMMAND_NICK = "nick";
+    
+    private static final String ERR_UNKNOWNCOMMAND = "421 %s %s: Unknown command";
+    private static final String ERR_NONICKNAMEGIVEN = "431 %s :No nickname given";
+    private static final String ERR_ERRONEUSNICKNAME = "432 %s %s :Illegal nickname: %s";
+    private static final String ERR_NICKNAMEINUSE = "433 %s %s :Nickname already in use";
+    private static final String ERR_NEEDMOREPARAMS = "461 %s %s :Required parameters: %s";
+    private static final String ERR_ALREADYREGISTERED = "462 %s :You may not reregister";
 }

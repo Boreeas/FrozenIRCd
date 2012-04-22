@@ -24,6 +24,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.logging.Level;
 
@@ -40,6 +41,8 @@ public class ServerLink extends Thread implements Interruptable, Connection {
     private Set<InputHandler> handlers = new CopyOnWriteArraySet<InputHandler>();
     
     private volatile boolean interrupted = false;
+    
+    private final UUID uuid = UUID.randomUUID();
     
     /**
      * Opens a link to the specified server.
@@ -132,7 +135,7 @@ public class ServerLink extends Thread implements Interruptable, Connection {
     public final void send(String line) {
         
         try {
-            SharedData.logger.log(Level.parse("0"), line);
+            SharedData.logger.log(Level.ALL, line);
             writer.write(line + "\r\n");
             writer.flush();
         } catch (IOException ioe) {
@@ -141,4 +144,34 @@ public class ServerLink extends Thread implements Interruptable, Connection {
             SharedData.logger.log(Level.SEVERE, String.format("Unable to write output to %s, closing link", socket.getInetAddress().getHostName()), ioe);
         }
     }
+
+    
+    @Override
+    public void disconnect() {
+        
+        send("SQUIT :Server delinked");
+        requestInterrupt();
+    }
+
+    
+    @Override
+    public void disconnect(String message) {
+        
+        send(String.format("SQUIT :%s", message));
+        requestInterrupt();
+    }
+    
+    
+    @Override
+    public String toString() {
+        
+        return socket.getInetAddress().toString();
+    }
+    
+    @Override
+    public UUID getUUID() {
+        
+        return uuid;
+    }
+    
 }
