@@ -13,17 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.boreeas.frozenircd;
+package net.boreeas.frozenircd.connection;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.util.logging.Level;
 import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSocket;
+import net.boreeas.frozenircd.Interruptable;
 import net.boreeas.frozenircd.config.SharedData;
 
 /**
@@ -89,7 +92,14 @@ public class ConnectionListener extends Thread implements Interruptable {
                             Socket identdSocket = new Socket(socket.getInetAddress(), 113);
                             identdSocket.setSoTimeout(10000);
                             
-                            String id = new BufferedReader(new InputStreamReader(identdSocket.getInputStream())).readLine();
+                            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(identdSocket.getOutputStream()));
+                            writer.write(String.format("%s, %s", socket.getPort(), socket.getLocalPort()));
+                            
+                            
+                            String id = parseIdentResponse(
+                                            new BufferedReader(
+                                                    new InputStreamReader(
+                                                            identdSocket.getInputStream())).readLine());
                             
                             if (id == null || id.length() == 0) {
                                 throw new IOException();    // No ident reponse
@@ -103,6 +113,20 @@ public class ConnectionListener extends Thread implements Interruptable {
                         } catch (IOException ex) {
                             client.sendNotice("AUTH", "*** No Ident reponse");
                         }
+                    }
+                    
+                    public String parseIdentResponse(String response) {
+                        
+                        String[] fields = response.split(" ?: ?");
+                        if (fields.length < 4) {
+                            return null;
+                        }
+                        
+                        if (!fields[1].equalsIgnoreCase("USERID")) {
+                            return null;
+                        }
+                        
+                        return response.trim();
                     }
                 }).start();
                 

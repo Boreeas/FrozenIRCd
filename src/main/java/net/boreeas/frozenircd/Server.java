@@ -15,6 +15,9 @@
  */
 package net.boreeas.frozenircd;
 
+import net.boreeas.frozenircd.connection.ConnectionListener;
+import net.boreeas.frozenircd.connection.ServerLink;
+import net.boreeas.frozenircd.config.IncompleteConfigurationException;
 import java.util.logging.Logger;
 import net.boreeas.frozenircd.config.Config;
 import net.boreeas.frozenircd.config.SharedData;
@@ -25,6 +28,8 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.logging.Level;
+import net.boreeas.frozenircd.config.ConfigData;
+import net.boreeas.frozenircd.config.ConfigKey;
 
 /**
  * Represents the Server.
@@ -53,38 +58,17 @@ public final class Server {
      */
     private Server() {
         
-        Config config = SharedData.getConfig();
-        checkConfig(config);
-        
-        int port = Integer.parseInt(config.get("port")[0]);
-        SharedData.logger.log(Level.INFO, "Binding to port {0}", port);
-        
         connectionListeners = new HashSet<ConnectionListener>();
         
         linkServers();
         startListeners();
     }
     
-    private void checkConfig(Config config) {
-        
-        if (config.get(SharedData.CONFIG_KEY_PORT) == null) 
-            throw new IncompleteConfigurationException("Missing port");
-        
-        if (config.get(SharedData.CONFIG_KEY_HOST) == null)
-            throw new IncompleteConfigurationException("Missing hostname");
-            
-        if (config.get(SharedData.CONFIG_KEY_TOKEN) == null) 
-            throw new IncompleteConfigurationException("Missing token");
-            
-        if (config.get(SharedData.CONFIG_KEY_DESCRIPTION) == null)
-            throw new IncompleteConfigurationException("Missing description");
-        
-    }
-    
     public void startListeners() {
         
-        for (String port: SharedData.getConfig().get(SharedData.CONFIG_KEY_PORT)) {
+        for (String port: ConfigData.getConfigOption(ConfigKey.PORTS)) {
             
+            SharedData.logger.log(Level.INFO, "Binding to port {0}", port);
             boolean useSSL = false;
             if (port.startsWith("+")) {
                 // +[port] indicates an SSL port
@@ -148,7 +132,7 @@ public final class Server {
      */
     private void linkServers() {
         
-        String[] servers = SharedData.getConfig().get(SharedData.CONFIG_KEY_LINKS);
+        String[] servers = ConfigData.getConfigOption(ConfigKey.LINKS);
         
         if (servers == null) {
             

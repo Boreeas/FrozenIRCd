@@ -13,19 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.boreeas.frozenircd;
+package net.boreeas.frozenircd.connection;
 
 /**
  *
  * @author Boreeas
  */
-public class IncompleteConfigurationException extends RuntimeException {
-
-    public IncompleteConfigurationException() {
-        super();
-    }
+public interface InputHandler {
     
-    public IncompleteConfigurationException(String string) {
-        super(string);
-    }    
+    public void onInput(Connection connection, String input);
+    
+    public void onConnect(Connection connection);
+    
+    public void onDisconnect(Connection connection);
+    
 }

@@ -15,6 +15,8 @@
  */
 package net.boreeas.frozenircd;
 
+import net.boreeas.frozenircd.connection.Connection;
+
 /**
  *
  * @author Boreeas

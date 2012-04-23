@@ -117,8 +117,20 @@ public class Config {
                 values[i] = values[i].replace("\\" + FIELD_SEPARATOR, FIELD_SEPARATOR);  // Unescape field separators
             }
             
+            parts[0] = parts[0].trim();
             
-            fields.put(parts[0].trim(), values);
+            if (fields.containsKey(parts[0])) {
+                
+                // Join old and new values
+                String[] old = fields.get(parts[0]);
+                String[] newArray = new String[old.length + values.length];
+                System.arraycopy(old, 0, newArray, 0, old.length);
+                System.arraycopy(values, 0, newArray, old.length, values.length);
+                
+                values = newArray;
+            }
+            
+            fields.put(parts[0], values);
         }
         
         reader.close();

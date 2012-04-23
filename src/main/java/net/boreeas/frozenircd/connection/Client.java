@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.boreeas.frozenircd;
+package net.boreeas.frozenircd.connection;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -27,6 +27,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.logging.Level;
+import net.boreeas.frozenircd.Interruptable;
+import net.boreeas.frozenircd.config.ConfigData;
+import net.boreeas.frozenircd.config.ConfigKey;
 import net.boreeas.frozenircd.config.SharedData;
 
 /**
@@ -132,7 +135,7 @@ public class Client extends Thread implements Interruptable, Connection {
             
             SharedData.logger.log(Level.parse("0"), "[-> {0}] {1}", new Object[]{socket.getInetAddress(), line});
             
-            writer.write(String.format(":%s %s\r\n", SharedData.getConfig().get(SharedData.CONFIG_KEY_HOST), line));
+            writer.write(String.format(":%s %s\r\n", ConfigData.getFirstConfigOption(ConfigKey.HOST), line));
             writer.flush();
         } catch (IOException ioe) {
             
@@ -159,7 +162,7 @@ public class Client extends Thread implements Interruptable, Connection {
         
         try {
             
-            String toSend = String.format(":%s NOTICE %s :%s", SharedData.getConfig().get(SharedData.CONFIG_KEY_HOST)[0], sender, message);
+            String toSend = String.format(":%s NOTICE %s :%s", ConfigData.getFirstConfigOption(ConfigKey.HOST), sender, message);
             SharedData.logger.log(Level.parse("0"), "[-> {0}] {1}", new Object[]{socket.getInetAddress(), toSend});
             writer.write(String.format("%s\r\n", toSend));
             writer.flush();
@@ -174,7 +177,7 @@ public class Client extends Thread implements Interruptable, Connection {
         
         try {
             
-            String toSend = String.format(":%s PRIVMSG %s :%s", SharedData.getConfig().get(SharedData.CONFIG_KEY_HOST)[0], sender, message);
+            String toSend = String.format(":%s PRIVMSG %s :%s", ConfigData.getFirstConfigOption(ConfigKey.HOST), sender, message);
             SharedData.logger.log(Level.parse("0"), "[-> {0}] {1}", new Object[]{socket.getInetAddress(), toSend});
             writer.write(String.format("%s\r\n", toSend));
             writer.flush();
@@ -302,11 +305,11 @@ public class Client extends Thread implements Interruptable, Connection {
     }
 
     public void setNickname(String nickname) {
-        this.nickname = nickname;
+        this.nickname = SharedData.cleanString(nickname);
     }
 
     public void setRealname(String realname) {
-        this.realname = realname;
+        this.realname = SharedData.cleanString(realname);
     }
 
     public void setUsername(String username) {
@@ -315,11 +318,11 @@ public class Client extends Thread implements Interruptable, Connection {
             username = "~" + username;
         }
         
-        this.username = username;
+        this.username = SharedData.cleanString(username);
     }
     
     public void setHostname(String hostname) {
-        this.hostname = hostname;
+        this.hostname = SharedData.cleanString(hostname);
     }
     
     public void setIdentified(boolean flag) {

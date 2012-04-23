@@ -13,9 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.boreeas.frozenircd;
+package net.boreeas.frozenircd.connection;
 
-import net.boreeas.frozenircd.config.Config;
 import net.boreeas.frozenircd.config.SharedData;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -27,6 +26,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.logging.Level;
+import net.boreeas.frozenircd.Interruptable;
+import net.boreeas.frozenircd.config.ConfigData;
+import net.boreeas.frozenircd.config.ConfigKey;
 
 /**
  * This class represents a link to another IRC server.
@@ -59,12 +61,10 @@ public class ServerLink extends Thread implements Interruptable, Connection {
         reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
         
-        Config config = SharedData.getConfig();
-        
         send(String.format("PASS %1s %2s%3s IRC|%3s", password, SharedData.PROTOCOL_VERSION, SharedData.BUILD_IDENTIFIER));
-        send(String.format("SERVER %s 1 %s : %s", config.get(SharedData.CONFIG_KEY_HOST), 
-                                                          config.get(SharedData.CONFIG_KEY_TOKEN), 
-                                                          config.get(SharedData.CONFIG_KEY_DESCRIPTION)));
+        send(String.format("SERVER %s 1 %s : %s", ConfigData.getFirstConfigOption(ConfigKey.HOST), 
+                                                          ConfigData.getFirstConfigOption(ConfigKey.TOKEN), 
+                                                          ConfigData.getFirstConfigOption(ConfigKey.DESCRIPTION)));
     }
 
     @Override

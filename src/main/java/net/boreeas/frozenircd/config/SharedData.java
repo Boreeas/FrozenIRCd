@@ -15,45 +15,43 @@
  */
 package net.boreeas.frozenircd.config;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
-import net.boreeas.frozenircd.Client;
-import net.boreeas.frozenircd.ClientInputHandler;
+import net.boreeas.frozenircd.connection.Client;
+import net.boreeas.frozenircd.connection.ClientInputHandler;
 import net.boreeas.frozenircd.CommandHandler;
-import net.boreeas.frozenircd.Connection;
-import net.boreeas.frozenircd.ConnectionPool;
-import net.boreeas.frozenircd.InputHandler;
+import net.boreeas.frozenircd.connection.Connection;
+import net.boreeas.frozenircd.connection.ConnectionPool;
+import net.boreeas.frozenircd.connection.InputHandler;
 
 /**
- *
+ * This class provides a number of common variables and functions that are used
+ * across the project
  * @author Boreeas
  */
 public class SharedData {
      
-    
-    
-    
+    /**
+     * The version of the protocol used for this implementation
+     */
     public static final String PROTOCOL_VERSION = "0210";
+    
+    /**
+     * The identifier for this build
+     */
     public static final String BUILD_IDENTIFIER = "frozen001a";
     
-    public static final String CONFIG_KEY_HOST = "hostname";
-    public static final String CONFIG_KEY_DESCRIPTION = "description";
-    public static final String CONFIG_KEY_PASS = "pass";
-    public static final String CONFIG_KEY_PORT = "port";
-    
-    public static final String CONFIG_KEY_NICK_LENGTH = "nicklength";
-    public static final String CONFIG_KEY_BLACKLISTED_NICKS = "nickblacklist";
-    
-    public static final String CONFIG_KEY_LINKS = "links";
-    public static final String CONFIG_KEY_TOKEN = "token";
-    public static final String CONFIG_KEY_LINK_PASS = "linkpass";
-    
+    /**
+     * All commands the server knows that can be executed by a client
+     */
     private static Map<String, CommandHandler> clientCommands = new HashMap<String, CommandHandler>();
+    
+    /**
+     * All commands the server knows that can be executed by other servers
+     */
     private static Map<String, CommandHandler> serverCommands = new HashMap<String, CommandHandler>();
     
     /**
@@ -122,7 +120,8 @@ public class SharedData {
             // TODO Do something
         }
     };
-        /**
+    
+    /**
      * The pool of all linked servers
      */
     public static final ConnectionPool serverPool = new ConnectionPool();
@@ -133,16 +132,18 @@ public class SharedData {
     public static final ConnectionPool clientPool = new ConnectionPool();
     
     
-    /**
-     * The general configuration settings
-     */
-    private static Config config;
-    
+    // Setup of some things
     static {
-        logger.setLevel(Level.parse("0"));
-        Config localConfig = getConfig();
-        if (!localConfig.containsKey(CONFIG_KEY_NICK_LENGTH)) {
-            localConfig.set(CONFIG_KEY_NICK_LENGTH, "15");
+        String loglevel 
+                = ConfigData.getFirstConfigOption(ConfigKey.LOGGING_LEVEL);
+        if (!loglevel.matches("\\-?[0-9]+")) {
+            logger.setLevel(Level.parse("0"));
+            logger.log(Level.WARNING, "Config option \"{0}\" did not match the "
+                    + "required format (must be an integer) - Defaulting to 0", 
+                    ConfigKey.LOGGING_LEVEL.getKey());
+        } else {
+            logger.setLevel(Level.parse(loglevel));
+            logger.log(Level.INFO, "Logging at level {0}", loglevel);
         }
         
         logger.log(Level.INFO, "Setting up client command map");
@@ -154,40 +155,50 @@ public class SharedData {
     /**
      * The pattern that nicknames must adhere to
      */
-    public static final Pattern nickPattern = Pattern.compile("[a-zA-Z0-9_\\-\\]\\[]{1," + getConfig().get(CONFIG_KEY_NICK_LENGTH)[0] + "}");
+    public static final Pattern nickPattern 
+            = Pattern.compile(
+                String.format("%s{%s,%s}",
+                    ConfigData.getConfigOption(ConfigKey.NICK_PATTERN)[0],
+                    ConfigData.getConfigOption(ConfigKey.MIN_NICK_LENGTH)[0],
+                    ConfigData.getConfigOption(ConfigKey.MAX_NICK_LENGTH)[0]));
    
     
 
     
     
+    
+    
     /**
-     * Returns the general IRCd config. If an IOException occurs, or the file does not exists, it will return an
-     * empty (or incomplete) config.
-     * @return The general IRCd config
+     * Removes all non-printable characters from a string.
+     * @param s The string to clean
+     * @return The cleaned string
+     * @author http://stackoverflow.com/a/7161653
      */
-    public static synchronized Config getConfig() {
+    public static String cleanString(String s) {
         
-        if (config == null) {
+        int length = s.length();
+        
+        char[] oldChars = new char[length + 1];
+        s.getChars(0, length, oldChars, 0);
+        
+        oldChars[length] = '\0';    // Avoiding explicit bound check in while
+        
+        int newLen = -1;
+        while (oldChars[++newLen] > ' ');   // Find first non-printable, all characters before that can remain as-is
+        
+        // If there are none it ends on the null char I appended
+        for (int j = newLen; j < length; j++) {
             
-            File configFile = new File("./configs/config.conf");            
-            config = new Config(configFile);
+            char ch = oldChars[j];
             
-            try {
-
-                if (!configFile.exists()) {
-
-                    configFile.getParentFile().mkdir();
-                    configFile.createNewFile();
-                }
+            if (ch > ' ') {
                 
-                config.load();
-            } catch (IOException ex) {
-                
-                
+                oldChars[newLen] = ch;  // The while avoids repeated overwriting here when newLen==j
+                newLen++;
             }
         }
         
-        return config;
+        return new String(oldChars, 0, newLen);
     }
     
     
@@ -256,16 +267,13 @@ public class SharedData {
                     connection.send(String.format(ERR_ERRONEUSNICKNAME, nickname, args[0], "Illegal character"));
                     return;
                 }
-                
-                if (getConfig().get(CONFIG_KEY_BLACKLISTED_NICKS) != null) {
-                    
-                    for (String nick: getConfig().get(CONFIG_KEY_BLACKLISTED_NICKS)) {
-                        
-                        if (nick.equalsIgnoreCase(args[0])) {
-                            
-                            connection.send(String.format(ERR_ERRONEUSNICKNAME, nickname, args[0], "Illegal nickname"));
-                            return;
-                        }
+                  
+                for (String nick : ConfigData.getConfigOption(ConfigKey.BLACKLISTED_NICKS)) {
+
+                    if (nick.equalsIgnoreCase(args[0])) {
+
+                        connection.send(String.format(ERR_ERRONEUSNICKNAME, nickname, args[0], "Illegal nickname"));
+                        return;
                     }
                 }
                 
