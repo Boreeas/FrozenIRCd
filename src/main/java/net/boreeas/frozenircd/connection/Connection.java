@@ -29,5 +29,7 @@ public interface Connection {
     
     public void disconnect(String message);
     
+    public boolean passGiven();
+    
     public UUID getUUID();
 }

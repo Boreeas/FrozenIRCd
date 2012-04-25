@@ -174,4 +174,9 @@ public class ServerLink extends Thread implements Interruptable, Connection {
         return uuid;
     }
     
+    @Override
+    public boolean passGiven() {
+        
+        return true;    // Password given before registration
+    }
 }

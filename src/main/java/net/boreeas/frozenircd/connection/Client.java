@@ -49,12 +49,18 @@ public class Client extends Thread implements Interruptable, Connection {
     private volatile boolean interrupted;
     private boolean closed;
     
+    private boolean identdResponse = false;
+    private boolean nickGiven = false;
+    private boolean userGiven = false;
+    private boolean passGiven = false;
+    
     private Set<Character> flags = new HashSet<Character>();
+    
     private String username;
     private String realname;
     private String nickname;
     private String hostname;
-    private boolean identdResponse = false;
+    
     private final UUID uuid = UUID.randomUUID();
     
     public Client(Socket socket, boolean ssl) throws IOException {
@@ -82,7 +88,7 @@ public class Client extends Thread implements Interruptable, Connection {
                     break;  // Connection closed
                 }
                 
-                for (InputHandler handler: handlers) {
+                for (ClientInputHandler handler: handlers) {
                     
                     handler.onInput(this, input);
                 }
@@ -250,6 +256,22 @@ public class Client extends Thread implements Interruptable, Connection {
     }
     
     /**
+     * Adds all chars in the string to the client
+     * @param flagString 
+     */
+    public void addFlags(String flagString) {
+        
+        for (char flag: flagString.toCharArray()) {
+            flags.add(flag);
+        }
+        
+        for (ClientInputHandler handler: handlers) {
+            
+            handler.onModeChange(this, flags());
+        }
+    }
+    
+    /**
      * Removes a mode flag from the client and notifies all input handlers of the mode change
      * @param flag The flag to remove
      */
@@ -292,6 +314,11 @@ public class Client extends Thread implements Interruptable, Connection {
         return nickname;
     }
     
+    public String getSafeNickname() {
+        
+        return (nickname == null) ? "*" : nickname;
+    }
+    
     public String getUsername() {
         return username;
     }
@@ -300,12 +327,39 @@ public class Client extends Thread implements Interruptable, Connection {
         return hostname;
     }
     
+    public boolean userGiven() {
+        
+        return userGiven;
+    }
+    
+    public boolean nickGiven() {
+        
+        return nickGiven;
+    }
+    
+    public boolean passGiven() {
+        
+        return passGiven;
+    }
+    
+    public boolean receivedIdentResponse() {
+    
+        return identdResponse;
+    }
+    
+    public boolean registrationCompleted() {
+        
+        return nickGiven && userGiven 
+                && ((ConfigData.getFirstConfigOption(ConfigKey.USING_PASS).equalsIgnoreCase("true")) ? passGiven : true);
+    }
+    
     public String getMask() {
         return String.format("%s!%s@%s", nickname, username, hostname);
     }
 
     public void setNickname(String nickname) {
         this.nickname = SharedData.cleanString(nickname);
+        nickGiven = true;
     }
 
     public void setRealname(String realname) {
@@ -319,6 +373,7 @@ public class Client extends Thread implements Interruptable, Connection {
         }
         
         this.username = SharedData.cleanString(username);
+        userGiven = true;
     }
     
     public void setHostname(String hostname) {
@@ -328,6 +383,11 @@ public class Client extends Thread implements Interruptable, Connection {
     public void setIdentified(boolean flag) {
         this.identdResponse = flag;
     }
+    
+    public void setPassGiven(boolean flag) {
+        this.passGiven = true;
+    }
+
     
     
     

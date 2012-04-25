@@ -75,13 +75,9 @@ public class Config {
      */
     public void load() throws IOException {
         
+        
         //We are reloading from the disk, so remove everything to prevent old entries
         clear();
-        
-        if (!modified) {
-            
-            return; // We are done
-        }
         
         BufferedReader reader = null;
         String input = null;

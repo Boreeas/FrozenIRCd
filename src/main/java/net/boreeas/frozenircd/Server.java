@@ -66,6 +66,8 @@ public final class Server {
     
     public void startListeners() {
         
+        SharedData.logger.log(Level.INFO, "Starting listeners:");
+        
         for (String port: ConfigData.getConfigOption(ConfigKey.PORTS)) {
             
             SharedData.logger.log(Level.INFO, "Binding to port {0}", port);
