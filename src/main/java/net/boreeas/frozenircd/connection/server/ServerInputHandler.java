@@ -13,22 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.boreeas.frozenircd.connection;
-
-import java.util.logging.Level;
-import net.boreeas.frozenircd.config.SharedData;
+package net.boreeas.frozenircd.connection.server;
 
 /**
  *
  * @author Boreeas
  */
-public interface ClientInputHandler {
+public interface ServerInputHandler {
     
-    public void onInput(Client client, String input);
+    public void onInput(ServerLink link, String input);
     
-    public void onModeChange(Client client, String modeString);
+    public void onLink(ServerLink link);
     
-    public void onConnect(Client client);
+    public void onDisconnect(ServerLink link);
     
-    public void onDisconnect(Client client);
 }

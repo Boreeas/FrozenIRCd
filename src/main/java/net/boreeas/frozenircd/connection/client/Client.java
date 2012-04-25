@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.boreeas.frozenircd.connection;
+package net.boreeas.frozenircd.connection.client;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -31,6 +31,7 @@ import net.boreeas.frozenircd.Interruptable;
 import net.boreeas.frozenircd.config.ConfigData;
 import net.boreeas.frozenircd.config.ConfigKey;
 import net.boreeas.frozenircd.config.SharedData;
+import net.boreeas.frozenircd.connection.Connection;
 
 /**
  *
@@ -248,6 +249,11 @@ public class Client extends Thread implements Interruptable, Connection {
      */
     public void addFlag(char flag) {
         
+        if (!SharedData.settableUmodes.contains(flag)) {
+            send(String.format(SharedData.ERR_UMODEUNKNOWNFLAG, getSafeNickname(), flag));
+            return;
+        }
+        
         flags.add(flag);
         for (ClientInputHandler handler: handlers) {
             
@@ -262,7 +268,14 @@ public class Client extends Thread implements Interruptable, Connection {
     public void addFlags(String flagString) {
         
         for (char flag: flagString.toCharArray()) {
-            flags.add(flag);
+            
+            if (!SharedData.settableUmodes.contains(flag)) {
+                
+                send(String.format(SharedData.ERR_UMODEUNKNOWNFLAG, getSafeNickname(), flag));
+            } else {
+            
+                flags.add(flag);
+            }
         }
         
         for (ClientInputHandler handler: handlers) {
@@ -276,8 +289,33 @@ public class Client extends Thread implements Interruptable, Connection {
      * @param flag The flag to remove
      */
     public void removeFlag(char flag) {
+
+        if (flag == 'r') {
+            
+            send(String.format(SharedData.ERR_UMODEUNKNOWNFLAG, getSafeNickname(), "Cannot set umode -r"));
+            return;
+        }
         
         flags.remove(flag);
+        
+        for (ClientInputHandler handler: handlers) {
+            
+            handler.onModeChange(this, flags());
+        }
+    }
+    
+    public void removeFlags(String flagString) {
+        
+        for (char flag: flagString.toCharArray()) {
+            
+            if (flag == 'r') {
+                
+                send(String.format(SharedData.ERR_UMODEUNKNOWNFLAG, getSafeNickname(), "Cannot set umode -r"));
+            } else {
+            
+                flags.remove(flag);
+            }
+        }
         
         for (ClientInputHandler handler: handlers) {
             

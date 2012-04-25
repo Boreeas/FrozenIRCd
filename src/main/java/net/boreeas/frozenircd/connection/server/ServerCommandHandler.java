@@ -13,15 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.boreeas.frozenircd;
+package net.boreeas.frozenircd.connection.server;
 
+import net.boreeas.frozenircd.connection.client.*;
 import net.boreeas.frozenircd.connection.Connection;
 
 /**
  *
  * @author Boreeas
  */
-public interface CommandHandler {
+public interface ServerCommandHandler {
     
-    public void onCommand(Connection connection, String[] args, String argsAsString);
+    public void onCommand(ServerLink link, String[] args, String argsAsString);
 }

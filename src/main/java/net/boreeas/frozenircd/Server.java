@@ -16,7 +16,7 @@
 package net.boreeas.frozenircd;
 
 import net.boreeas.frozenircd.connection.ConnectionListener;
-import net.boreeas.frozenircd.connection.ServerLink;
+import net.boreeas.frozenircd.connection.server.ServerLink;
 import net.boreeas.frozenircd.config.IncompleteConfigurationException;
 import java.util.logging.Logger;
 import net.boreeas.frozenircd.config.Config;

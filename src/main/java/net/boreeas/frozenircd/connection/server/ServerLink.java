@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.boreeas.frozenircd.connection;
+package net.boreeas.frozenircd.connection.server;
 
 import net.boreeas.frozenircd.config.SharedData;
 import java.io.BufferedReader;
@@ -29,6 +29,7 @@ import java.util.logging.Level;
 import net.boreeas.frozenircd.Interruptable;
 import net.boreeas.frozenircd.config.ConfigData;
 import net.boreeas.frozenircd.config.ConfigKey;
+import net.boreeas.frozenircd.connection.Connection;
 
 /**
  * This class represents a link to another IRC server.
@@ -40,7 +41,7 @@ public class ServerLink extends Thread implements Interruptable, Connection {
     private BufferedReader reader;
     private BufferedWriter writer;
     
-    private Set<InputHandler> handlers = new CopyOnWriteArraySet<InputHandler>();
+    private Set<ServerInputHandler> handlers = new CopyOnWriteArraySet<ServerInputHandler>();
     
     private volatile boolean interrupted = false;
     
@@ -85,7 +86,7 @@ public class ServerLink extends Thread implements Interruptable, Connection {
                 }
                 
                 // We don't handle input ourself, but let input handler register to do so
-                for (InputHandler handler: handlers) {    
+                for (ServerInputHandler handler: handlers) {    
                     handler.onInput(this, input);
                 } 
                 
@@ -120,7 +121,7 @@ public class ServerLink extends Thread implements Interruptable, Connection {
      * Adds an input handler to be notified if input is read.
      * @param handler The handler to register to be notified
      */
-    public synchronized void addHandler(InputHandler handler) {
+    public synchronized void addHandler(ServerInputHandler handler) {
         
         handlers.add(handler);
     }

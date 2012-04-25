@@ -15,6 +15,7 @@
  */
 package net.boreeas.frozenircd.connection;
 
+import net.boreeas.frozenircd.connection.client.Client;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;

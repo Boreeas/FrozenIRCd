@@ -19,17 +19,20 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
-import net.boreeas.frozenircd.connection.Client;
-import net.boreeas.frozenircd.connection.ClientInputHandler;
-import net.boreeas.frozenircd.CommandHandler;
+import net.boreeas.frozenircd.connection.client.Client;
+import net.boreeas.frozenircd.connection.client.ClientInputHandler;
+import net.boreeas.frozenircd.connection.client.ClientCommandHandler;
 import net.boreeas.frozenircd.connection.Connection;
 import net.boreeas.frozenircd.connection.ConnectionPool;
-import net.boreeas.frozenircd.connection.InputHandler;
+import net.boreeas.frozenircd.connection.server.ServerCommandHandler;
+import net.boreeas.frozenircd.connection.server.ServerInputHandler;
+import net.boreeas.frozenircd.connection.server.ServerLink;
 import net.boreeas.frozenircd.utils.HashUtils;
 
 /**
@@ -52,12 +55,12 @@ public class SharedData {
     /**
      * All commands the server knows that can be executed by a client
      */
-    private static Map<String, CommandHandler> clientCommands = new HashMap<String, CommandHandler>();
+    private static Map<String, ClientCommandHandler> clientCommands = new HashMap<String, ClientCommandHandler>();
     
     /**
      * All commands the server knows that can be executed by other servers
      */
-    private static Map<String, CommandHandler> serverCommands = new HashMap<String, CommandHandler>();
+    private static Map<String, ServerCommandHandler> serverCommands = new HashMap<String, ServerCommandHandler>();
     
     /**
      * The public logger object to be used by every class.
@@ -67,21 +70,21 @@ public class SharedData {
     /**
      * The handler that takes care of any input received from a server
      */
-    public static final InputHandler serverLinkInputHandler = new InputHandler() {
+    public static final ServerInputHandler serverLinkInputHandler = new ServerInputHandler() {
 
-        public void onInput(Connection connection, String input) {
+        public void onInput(ServerLink link, String input) {
             
-            logger.log(Level.FINEST, "[{0} ->] {1}", new Object[]{connection.toString(), input});
+            logger.log(Level.FINEST, "[{0} ->] {1}", new Object[]{link, input});
         }
 
-        public void onConnect(Connection connection) {
+        public void onLink(ServerLink link) {
             
-            logger.log(Level.FINEST, "Server {0} linked", connection);
+            logger.log(Level.FINEST, "Server {0} linked", link);
         }
 
-        public void onDisconnect(Connection connection) {
+        public void onDisconnect(ServerLink link) {
             
-            logger.log(Level.FINEST, "Server {0} delinked", connection);
+            logger.log(Level.FINEST, "Server {0} delinked", link);
         }
     };
     
@@ -191,9 +194,35 @@ public class SharedData {
                     ConfigData.getConfigOption(ConfigKey.MAX_NICK_LENGTH)[0]));
    
     
-
+    /**
+     * Returns the lowercase version of <code>string</code> with the 
+     * @param string
+     * @return 
+     */
+    public static String toLowerCase(String string) {
+        
+        return string.toLowerCase().replace('[', '{').replace(']', '}').replace('\\', '|').replace('~', '^');
+    }
     
     
+    public static boolean nicknamesEqual(String nick1, String nick2) {
+        
+        
+        if (nick1 == nick2) {
+            return true;
+        }
+        
+        if ((nick1 == null && nick2 != null) || (nick1 != null && nick2 == null)) {
+            return false;
+        }
+        
+        
+        if (nick1.length() != nick2.length()) {
+            return false;
+        }
+        
+        return toLowerCase(nick1).equals(toLowerCase(nick2));
+    }
     
     
     /**
@@ -243,47 +272,41 @@ public class SharedData {
         
         Map<Character, String> map = new HashMap<Character, String>();
         
+        map.put('o', "Designates a user as IRC Operator. This mode can only be set by use of the OPER command");
+        
         return map;
     }
     
     
     private static void fillClientCommandMap() {
         
-        clientCommands.put(CLIENT_COMMAND_PING, new CommandHandler() {
+        clientCommands.put(CLIENT_COMMAND_PING, new ClientCommandHandler() {
 
-            public void onCommand(Connection connection, String[] args, String argsAsString) {
+            public void onCommand(Client client, String[] args, String argsAsString) {
                 
-                connection.send("PONG " + argsAsString);
+                client.sendWithoutPrefix(":PONG " + argsAsString);
             }
         });
         
-        clientCommands.put(CLIENT_COMMAND_USER, new CommandHandler() {
+        clientCommands.put(CLIENT_COMMAND_USER, new ClientCommandHandler() {
 
-            public void onCommand(Connection connection, String[] args, String argsAsString) {
-                
-                if (!(connection instanceof Client)) {
-                    
-                    logger.log(Level.SEVERE, "{0} is not a client, but wants to be treated as such: Closing connection", connection);
-                    connection.disconnect("Not a user");
-                    return;
-                }
-                
-                if (passwordNeeded && !connection.passGiven()) {
+            public void onCommand(Client client, String[] args, String argsAsString) {
+                                
+                if (passwordNeeded && !client.passGiven()) {
                     
                     return; // Drop silently
                 }
                 
-                Client client = (Client)connection;
                 String nickname = client.getSafeNickname();
                 
                 if (args.length < 4) {
-                    connection.send(String.format(ERR_NEEDMOREPARAMS, nickname, CLIENT_COMMAND_USER, "<username> <unused> <unused> :<realname>"));
+                    client.send(String.format(ERR_NEEDMOREPARAMS, nickname, CLIENT_COMMAND_USER, "<username> <unused> <unused> :<realname>"));
                     return;
                 }
                 
                 if (client.userGiven()) {
                     // ERR_ALREADYREGISTERED
-                    connection.send(String.format(ERR_ALREADYREGISTERED, nickname));
+                    client.send(String.format(ERR_ALREADYREGISTERED, nickname));
                 }
                 
                 if (!client.receivedIdentResponse()) {
@@ -294,34 +317,26 @@ public class SharedData {
             }
         });
         
-        clientCommands.put(CLIENT_COMMAND_NICK, new CommandHandler() {
+        clientCommands.put(CLIENT_COMMAND_NICK, new ClientCommandHandler() {
 
-            public void onCommand(Connection connection, String[] args, String argsAsString) {
+            public void onCommand(Client client, String[] args, String argsAsString) {
                 
-                if (!(connection instanceof Client)) {
-                    
-                    logger.log(Level.SEVERE, "{0} is not a client, but wants to be treated as such: Closing connection", connection);
-                    connection.disconnect("Not a user");
-                    return;
-                }
-                
-                if (passwordNeeded && !connection.passGiven()) {
+                if (passwordNeeded && !client.passGiven()) {
                     
                     return; // Drop silently
                 }
                 
-                Client client = (Client)connection;
                 String nickname = client.getSafeNickname();
                 
                 if (args.length == 0) {
                     
-                    connection.send(String.format(ERR_NONICKNAMEGIVEN, nickname));
+                    client.send(String.format(ERR_NONICKNAMEGIVEN, nickname));
                     return;
                 }
                 
                 if (!nickPattern.matcher(args[0]).matches()) {
                     
-                    connection.send(String.format(ERR_ERRONEUSNICKNAME, nickname, args[0], "Illegal character"));
+                    client.send(String.format(ERR_ERRONEUSNICKNAME, nickname, args[0], "Illegal character"));
                     return;
                 }
                   
@@ -329,17 +344,17 @@ public class SharedData {
 
                     if (nick.equalsIgnoreCase(args[0])) {
 
-                        connection.send(String.format(ERR_ERRONEUSNICKNAME, nickname, args[0], "Illegal nickname"));
+                        client.send(String.format(ERR_ERRONEUSNICKNAME, nickname, args[0], "Illegal nickname"));
                         return;
                     }
                 }
                 
                 for (Connection conn: clientPool.getConnections()) {
                     
-                    if (conn instanceof Client && conn != connection && ((Client)conn).getUsername().equalsIgnoreCase(
-                            args[0])) {
+                    if (conn != client && nicknamesEqual(args[0], ((Client)conn).getSafeNickname())) {
                         
-                        connection.send(String.format(ERR_NICKNAMEINUSE, nickname, args[0]));
+                        client.send(String.format(ERR_NICKNAMEINUSE, nickname, args[0]));
+                        return;
                     }
                 }
                 
@@ -347,17 +362,15 @@ public class SharedData {
             }
         });
         
-        clientCommands.put(CLIENT_COMMAND_PASS, new CommandHandler() {
+        clientCommands.put(CLIENT_COMMAND_PASS, new ClientCommandHandler() {
 
-            public void onCommand(Connection connection, String[] args, String argsAsString) {
+            public void onCommand(Client client, String[] args, String argsAsString) {
                 
                 if (!passwordNeeded) {
                     return; // PASS ignored if none is required
                 }
                 
-                Client client = (Client)connection;
-                
-                if (connection.passGiven()) {
+                if (client.passGiven()) {
                     
                     client.send(String.format(ERR_ALREADYREGISTERED, client.getSafeNickname()));
                     return;
@@ -381,32 +394,34 @@ public class SharedData {
                 
                 if (hash.equals(ConfigData.getFirstConfigOption(ConfigKey.PASS))) {
                     
-                    ((Client)connection).sendNotice("***", "PASS accepted");
-                    ((Client)connection).setPassGiven(true);
+                    client.sendNotice("***", "PASS accepted");
+                    client.setPassGiven(true);
                 } else {
                     
-                    connection.disconnect("Please specify the password using the PASS command");
+                    client.disconnect("Please specify the password using the PASS command");
                 }
             }
         });
         
-        clientCommands.put(CLIENT_COMMAND_OPER, new CommandHandler() {
+        clientCommands.put(CLIENT_COMMAND_OPER, new ClientCommandHandler() {
 
-            public void onCommand(Connection connection, String[] args, String argsAsString) {
+            public void onCommand(Client client, String[] args, String argsAsString) {
                 
-                Client client = (Client) connection;
+                if (!client.registrationCompleted()) {
+                    return; // Drop any commands before registration is complete
+                }
                 
                 // Check for parameter completeness
                 if (args.length < 2) {
                     
-                    connection.send(String.format(ERR_NEEDMOREPARAMS, client.getSafeNickname(), CLIENT_COMMAND_OPER, "<name> <password>"));
+                    client.send(String.format(ERR_NEEDMOREPARAMS, client.getSafeNickname(), CLIENT_COMMAND_OPER, "<name> <password>"));
                     return;
                 }
                 
                 // Check if the user's host matches any o-line
                 if (!ConfigData.matchesOLine(client.getHostname())) {
                     
-                    connection.send(String.format(ERR_NOOPERHOST, client.getSafeNickname()));
+                    client.send(String.format(ERR_NOOPERHOST, client.getSafeNickname()));
                     return;
                 }
                 
@@ -414,7 +429,7 @@ public class SharedData {
                 try {
                     if (!ConfigData.checkOperPassword(args[0], args[1])) {
                         
-                        connection.send(String.format(ERR_PASSWDMISMATCH, client.getSafeNickname()));
+                        client.send(String.format(ERR_PASSWDMISMATCH, client.getSafeNickname()));
                         return;
                     }
                 } catch (NoSuchAlgorithmException ex) {
@@ -430,8 +445,57 @@ public class SharedData {
                     return;
                 }
                 
-                connection.send(String.format(RPL_YOUREOPER, client.getSafeNickname()));
+                client.send(String.format(RPL_YOUREOPER, client.getSafeNickname()));
                 client.addFlag('o');
+            }
+        });
+        
+        clientCommands.put(CLIENT_COMMAND_MODE, new ClientCommandHandler() {
+
+            public void onCommand(Client client, String[] args, String argsAsString) {
+                
+                if (!client.registrationCompleted()) {
+                    return;
+                }
+                
+                if (args.length < 1) {
+                    
+                    client.send(String.format(ERR_NEEDMOREPARAMS, client.getSafeNickname(), CLIENT_COMMAND_MODE, "<nick> [mode string]"));
+                    return;
+                }
+                
+                if (!nicknamesEqual(client.getSafeNickname(), args[0])) {
+                    
+                    //Don't allow to set other user's modes
+                    client.send(String.format(ERR_USERSDONTMATCH, client.getSafeNickname()));
+                    return;
+                }
+                
+                if (args.length == 1) {
+                    
+                    client.send(String.format(RPL_UMODEIS, client.getSafeNickname(), client.getSafeNickname(), client.flags()));
+                    return;
+                }
+                
+                if (args[1].startsWith("-")) {
+                    
+                    if (args[1].length() < 2) {
+                        return;
+                    }
+                    
+                    client.removeFlags(args[1].substring(1));
+                    return;
+                }
+                
+                if (args[1].startsWith("+")) {
+                    if (args[1].length() < 2) {
+                        return;
+                    }
+                    
+                    args[1] = args[1].substring(1);
+                }
+                
+                client.addFlags(args[1]);
             }
         });
     }
@@ -447,6 +511,7 @@ public class SharedData {
     private static final String CLIENT_COMMAND_NICK = "nick";
     private static final String CLIENT_COMMAND_PASS = "pass";
     private static final String CLIENT_COMMAND_OPER = "oper";
+    private static final String CLIENT_COMMAND_MODE = "mode";
     
     // Param 1 is always the nickname of the target, or * if none is given yet
     // Other parameters can be any information
@@ -458,9 +523,11 @@ public class SharedData {
     public static final String ERR_UNKNOWNCOMMAND = "421 %s %s: Unknown command";
     public static final String ERR_NONICKNAMEGIVEN = "431 %s :No nickname given";
     public static final String ERR_ERRONEUSNICKNAME = "432 %s %s :Illegal nickname: %s";
-    public static final String ERR_NICKNAMEINUSE = "433 %s %s :Nickname already in use";
-    public static final String ERR_NEEDMOREPARAMS = "461 %s %s :Required parameters: %s";
+    public static final String ERR_NICKNAMEINUSE = "433 %s :Nickname already in use: %s";
+    public static final String ERR_NEEDMOREPARAMS = "461 %s %s :Not enough parameters. Parameters: %s";
     public static final String ERR_ALREADYREGISTERED = "462 %s :You may not reregister";
     public static final String ERR_PASSWDMISMATCH = "464 %s :Invalid password";
     public static final String ERR_NOOPERHOST = "491 %s :Your host did not match any o-line";
+    public static final String ERR_UMODEUNKNOWNFLAG = "501 %s :Unknown mode flag %s";
+    public static final String ERR_USERSDONTMATCH = "502 %s :Can't set mode on other user";
 }
