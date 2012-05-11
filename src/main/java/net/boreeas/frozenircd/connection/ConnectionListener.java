@@ -21,8 +21,10 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.util.logging.Level;
 import javax.net.ssl.SSLServerSocketFactory;
@@ -41,25 +43,31 @@ public class ConnectionListener extends Thread implements Interruptable {
     
     private volatile boolean interrupted = false;
     
-    public ConnectionListener(int port) throws IOException {
+    public ConnectionListener(String host, int port) throws IOException {
         
-        this(port, false);
+        this(host, port, false);
     }
     
-    public ConnectionListener(int port, boolean useSSL) throws IOException {
-        
-        SharedData.logger.log(Level.INFO, "Opening connection listener on port {0} ({1})", new Object[]{port,
-                (useSSL) ? "ssl" : "no ssl"});
+    public ConnectionListener(String host, int port, boolean useSSL) throws IOException {
         
         this.useSSL = useSSL;
         
         if (!useSSL) {
             
-            serverSocket = new ServerSocket(port);
+            serverSocket = new ServerSocket();
         } else {
      
-            serverSocket = SSLServerSocketFactory.getDefault().createServerSocket(port);
+            serverSocket = SSLServerSocketFactory.getDefault().createServerSocket();
         }
+        
+        try {
+            serverSocket.bind(new InetSocketAddress(host, port));
+        } catch (SocketException ex) {
+            SharedData.logger.log(Level.SEVERE, "Unable to bind to address: {0} - Attempting to bind to default ip", ex.getMessage());
+            serverSocket.bind(new InetSocketAddress(port));
+        }
+        
+        SharedData.logger.log(Level.INFO, "Binding to {0}:{1} successful", new Object[]{serverSocket.getInetAddress(), Integer.toString(serverSocket.getLocalPort())});
     }
     
     @Override
@@ -71,7 +79,6 @@ public class ConnectionListener extends Thread implements Interruptable {
                 final Socket socket = serverSocket.accept();
                 
                 final Client client = new Client((useSSL) ? (SSLSocket) socket : socket, useSSL);
-                client.addHandler(SharedData.clientInputHandler);
                 
                 // Check for hostname
                 new Thread(new Runnable() {
@@ -132,7 +139,7 @@ public class ConnectionListener extends Thread implements Interruptable {
                 }).start();
                 
                 client.start();
-                SharedData.clientPool.addConnection(client.getUUID(), client);
+                SharedData.connectionPool.addConnection(client.getUUID(), client);
             } catch (IOException ex) {
                 
                 SharedData.logger.log(Level.SEVERE, "Unable to accept incoming connection on port " + serverSocket.getLocalPort(), ex);

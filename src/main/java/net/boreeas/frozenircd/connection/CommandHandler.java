@@ -13,14 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.boreeas.frozenircd;
+package net.boreeas.frozenircd.connection;
 
 /**
  *
  * @author Boreeas
  */
-public class Service {
+public interface CommandHandler<C> {
     
-    
-    
+    public void onCommand(C c, String[] commands);
 }

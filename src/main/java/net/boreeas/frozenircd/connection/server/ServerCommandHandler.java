@@ -15,6 +15,7 @@
  */
 package net.boreeas.frozenircd.connection.server;
 
+import net.boreeas.frozenircd.connection.CommandHandler;
 import net.boreeas.frozenircd.connection.client.*;
 import net.boreeas.frozenircd.connection.Connection;
 
@@ -22,7 +23,7 @@ import net.boreeas.frozenircd.connection.Connection;
  *
  * @author Boreeas
  */
-public interface ServerCommandHandler {
+public interface ServerCommandHandler extends CommandHandler<ServerLink> {
     
     public void onCommand(ServerLink link, String[] args, String argsAsString);
 }

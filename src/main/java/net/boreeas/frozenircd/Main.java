@@ -1,8 +1,13 @@
 package net.boreeas.frozenircd;
 
+import java.util.logging.Level;
+import net.boreeas.frozenircd.config.ConfigData;
+import net.boreeas.frozenircd.config.ConfigKey;
+import net.boreeas.frozenircd.config.SharedData;
+
 /**
  * This class controls the startup of the IRCd.
- * @author malte
+ * @author Boreeas
  */
 public final class Main {
 
@@ -17,6 +22,12 @@ public final class Main {
      * @param args The command line arguments
      */
     public static void main(final String[] args) {
+        
+        SharedData.logger.log(Level.INFO, "Checking configuration for completeness");
+        for (ConfigKey configkey: ConfigKey.values()) {
+            
+            ConfigData.getConfigOption(configkey);
+        }
         
         Server server = Server.getServer();
     }

@@ -15,21 +15,168 @@
  */
 package net.boreeas.frozenircd.connection;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.util.UUID;
+import java.util.logging.Level;
+import net.boreeas.frozenircd.Interruptable;
+import net.boreeas.frozenircd.config.SharedData;
+import net.boreeas.frozenircd.connection.client.ClientInputHandler;
 
 /**
  *
  * @author Boreeas
  */
-public interface Connection {
+public abstract class Connection extends Thread implements Interruptable {
     
-    public void send(String line);    
+    private boolean closed = false;
+    private boolean interrupted = false;
     
-    public void disconnect();
+    protected Socket socket;
+    protected BufferedReader reader;
+    protected BufferedWriter writer;
     
-    public void disconnect(String message);
+    protected UUID uuid = UUID.randomUUID();
     
-    public boolean passGiven();
+    private String connectPassword;
     
-    public UUID getUUID();
+    @Override
+    public void run() {
+
+        while (!interrupted) {
+            try {
+                
+                String input = reader.readLine();
+                if (input == null) {
+
+                    break;  // Connection closed
+                }
+                
+                onInput(input);
+
+            }  catch (SocketTimeoutException ex) {
+                continue;   //Prevent endless blocks
+            } catch (IOException ex) {
+
+                if (!closed) {
+                    // Ignore IOExceptions on closed connections
+                    SharedData.logger.log(Level.SEVERE, String.format("IOException while reading data from %s, closing connection.", socket.getInetAddress().getHostName()), ex);
+                }
+
+                break;
+            }
+
+            try {
+                sleep(50);
+            }
+            catch (InterruptedException ex) {
+                requestInterrupt();
+            }
+        }
+        
+        try {
+            reader.close();
+            writer.close();
+            socket.close();
+        } catch (IOException ioe) {
+            // Not much we can do here anyways
+            if (!closed) {
+                // Ignore IOExceptions on closed connections
+                SharedData.logger.log(Level.INFO, String.format("IOException while closing streams to %s", socket.getInetAddress().getHostName()), ioe);
+            }
+        }
+    }
+    
+    /**
+     * Requests that this connection may be terminated. Once this method has been
+     * called, it can not be undone. <br />
+     * The time until the connection actually terminates is indeterminate.
+     */
+    public void requestInterrupt() {
+        
+        this.interrupted = true;
+    }
+    
+    /**
+     * Disconnects this connection.
+     */
+    public void disconnect() {
+        
+        disconnect("Connection closed");
+    }
+    
+    /**
+     * Disconnects this connection.
+     * @param message The message for the disconnect
+     */
+    public void disconnect(String message) {
+        
+        send(String.format("QUIT :%s", message));
+        requestInterrupt();
+        closed = true;
+        
+        SharedData.connectionPool.removeConnection(getUUID());
+    }
+    
+    /**
+     * Sets the password used for the connection.
+     * @param connectPassword the password for the connection
+     */
+    public void setConnectPassword(String connectPassword) {
+        
+        this.connectPassword = connectPassword;
+    }
+    
+    /**
+     * Returns the password used for the connection.
+     * @return the password for the connection, or <code>null</code> if no password was used
+     */
+    public String passGiven() {
+        
+        return connectPassword;
+    } 
+    
+    /**
+     * Returns the unique identifier for this connection
+     * @return the unique identifier for this connection
+     */
+    public UUID getUUID() {
+        
+        return uuid;
+    }
+        
+    
+    @Override
+    public String toString() {
+        
+        return socket.getInetAddress().toString();
+    }
+    
+    /**
+     * This method should be called when the server receives input from the connection
+     * @param input The input receives
+     */
+    public abstract void onInput(String input);
+    
+    /**
+     * This method should be called when the connection terminates.
+     */
+    public abstract void onDisconnect();
+    
+    /**
+     * Sends a line to the receiver
+     * @param line The message to send
+     */
+    public abstract void send(String line);   
+    
+    /**
+     * Returns the common name for this connection. For servers, this should be
+     * the hostname. For clients and services, this should be the nickname.<br />
+     * This method must never return null.
+     * @return The common name for this connection
+     */
+    public abstract String getCommonName();
 }

@@ -13,15 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.boreeas.frozenircd.connection.client;
+package net.boreeas.frozenircd.utils;
 
-import net.boreeas.frozenircd.connection.CommandHandler;
+import junit.framework.TestCase;
 
 /**
  *
- * @author Boreeas
+ * @author malte
  */
-public interface ClientCommandHandler extends CommandHandler<Client> {
+public class HashUtilsTest extends TestCase {
     
-    public void onCommand(Client client, String[] args);
+    public HashUtilsTest(String testName) {
+        super(testName);
+    }
+    
+    @Override
+    protected void setUp() throws Exception {
+        super.setUp();
+    }
+
+    /**
+     * Test of SHA256 method, of class HashUtils.
+     */
+    public void testSHA256() throws Exception {
+        
+        System.out.println(HashUtils.SHA256("TestPW"));
+    }
 }

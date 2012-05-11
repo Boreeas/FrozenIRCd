@@ -24,6 +24,7 @@ import net.boreeas.frozenircd.config.SharedData;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -67,10 +68,10 @@ public final class Server {
     public void startListeners() {
         
         SharedData.logger.log(Level.INFO, "Starting listeners:");
+        String host = ConfigData.getFirstConfigOption(ConfigKey.HOST);
         
         for (String port: ConfigData.getConfigOption(ConfigKey.PORTS)) {
             
-            SharedData.logger.log(Level.INFO, "Binding to port {0}", port);
             boolean useSSL = false;
             if (port.startsWith("+")) {
                 // +[port] indicates an SSL port
@@ -84,7 +85,8 @@ public final class Server {
             }
             
             try {
-                ConnectionListener connListener = new ConnectionListener(Integer.parseInt(port), useSSL);
+                SharedData.logger.log(Level.INFO, "Binding to {0}:{1} ({2})", new Object[]{host, port, (useSSL) ? "ssl" : "no ssl"});
+                ConnectionListener connListener = new ConnectionListener(host, Integer.parseInt(port), useSSL);
                 connListener.start();
                 connectionListeners.add(connListener);
             } catch (IOException ex) {
@@ -105,10 +107,8 @@ public final class Server {
         }
         
         SharedData.logger.log(Level.INFO, "Disconnecting connected clients");
-        SharedData.clientPool.disconnectAll();
-        
         SharedData.logger.log(Level.INFO, "Delinking servers");
-        SharedData.serverPool.disconnectAll();
+        SharedData.connectionPool.disconnectAll();
         
         SharedData.logger.log(Level.INFO, "Spinning down");
     }
@@ -134,16 +134,9 @@ public final class Server {
      */
     private void linkServers() {
         
-        String[] servers = ConfigData.getConfigOption(ConfigKey.LINKS);
+        Set<String[]> servers = ConfigData.getULines();
         
-        if (servers == null) {
-            
-            return; //No servers specified
-        }
-        
-        for (String link: servers) {
-            
-            String[] data = link.split(":");
+        for (String[] data: servers) {
             
             try {
                 String host = data[0];
@@ -151,16 +144,15 @@ public final class Server {
                 String password = (data.length >= 3) ? data[2] : data[1];
 
                 ServerLink newLink = new ServerLink(host, port, password);
-                newLink.addHandler(SharedData.serverLinkInputHandler);
-                SharedData.serverPool.addConnection(newLink.getUUID(), newLink);
+                SharedData.connectionPool.addConnection(newLink.getUUID(), newLink);
             } catch (ArrayIndexOutOfBoundsException oobe) {
                 
                 // We did not get enough arguments to complete the connection
-                SharedData.logger.warning(String.format("Incorrect link entry format for entry %s: Accepted formats are <host>:<port>:<password> or <host>::<password>", link));
+                SharedData.logger.warning(String.format("Incorrect link entry format for entry %s: Accepted formats are <host>:<port>:<password> or <host>::<password>", Arrays.toString(data)));
                 continue;
             } catch (IOException ioe) {
                 
-                SharedData.logger.log(Level.SEVERE, String.format("Failed to connect to establish link %s: IOException", link), ioe);
+                SharedData.logger.log(Level.SEVERE, String.format("Failed to connect to establish link %s: IOException", Arrays.toString(data)), ioe);
                 continue;
             }       
         }

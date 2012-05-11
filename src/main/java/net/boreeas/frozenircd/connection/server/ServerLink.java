@@ -35,17 +35,9 @@ import net.boreeas.frozenircd.connection.Connection;
  * This class represents a link to another IRC server.
  * @author Boreeas
  */
-public class ServerLink extends Thread implements Interruptable, Connection {
+public class ServerLink extends Connection {
     
-    private Socket socket;
-    private BufferedReader reader;
-    private BufferedWriter writer;
-    
-    private Set<ServerInputHandler> handlers = new CopyOnWriteArraySet<ServerInputHandler>();
-    
-    private volatile boolean interrupted = false;
-    
-    private final UUID uuid = UUID.randomUUID();
+    private String host;
     
     /**
      * Opens a link to the specified server.
@@ -58,6 +50,8 @@ public class ServerLink extends Thread implements Interruptable, Connection {
         SharedData.logger.log(Level.INFO, "Opening link to server at {0}:{1} with password {2}", new Object[]{host, port,
                 password});
         
+        this.host = host;
+        
         socket = new Socket(host, port);
         reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
@@ -68,69 +62,7 @@ public class ServerLink extends Thread implements Interruptable, Connection {
                                                           ConfigData.getFirstConfigOption(ConfigKey.DESCRIPTION)));
     }
 
-    @Override
-    public void run() {
-        
-        // For graceful termination
-        while (!interrupted) {
-            
-            try {
-                
-                String input = reader.readLine();
-                
-                if (input == null) {
-                    
-                    // Null only if connection is closed
-                    SharedData.logger.info(String.format("Link to %s closed", socket.getInetAddress().getHostName()));
-                    break;
-                }
-                
-                // We don't handle input ourself, but let input handler register to do so
-                for (ServerInputHandler handler: handlers) {    
-                    handler.onInput(this, input);
-                } 
-                
-            } catch (IOException ioe) {
-                
-                SharedData.logger.log(Level.SEVERE, String.format("Link to %s closed with Exception", socket.getInetAddress().getHostName()), ioe);
-                break;
-            }
-            
-            try {
-                
-                // This reduces load on the processor and enables other threads to finish their read/writes
-                sleep(50);
-            } catch (InterruptedException ie) {
-                
-                // Stop requested
-                break;
-            }
-        }
-
-        try {
-            reader.close();
-            writer.close();
-            socket.close();
-        } catch (IOException ioe) {
-            
-            SharedData.logger.log(Level.WARNING, String.format("IOException while closing streams to %s", socket.getInetAddress().getHostName()), ioe);
-        }
-    }
     
-    /**
-     * Adds an input handler to be notified if input is read.
-     * @param handler The handler to register to be notified
-     */
-    public synchronized void addHandler(ServerInputHandler handler) {
-        
-        handlers.add(handler);
-    }
-
-    @Override
-    public void requestInterrupt() {
-        
-        interrupted = true;
-    }
 
     @Override
     public final void send(String line) {
@@ -146,38 +78,21 @@ public class ServerLink extends Thread implements Interruptable, Connection {
         }
     }
 
-    
     @Override
-    public void disconnect() {
+    public void onInput(String input) {
         
-        send("SQUIT :Server delinked");
-        requestInterrupt();
+        // TODO Server Protocol
     }
 
-    
     @Override
-    public void disconnect(String message) {
+    public void onDisconnect() {
         
-        send(String.format("SQUIT :%s", message));
-        requestInterrupt();
+        SharedData.logger.log(Level.INFO, "Link to {0} closed.", this);
     }
-    
-    
+
     @Override
-    public String toString() {
+    public String getCommonName() {
         
-        return socket.getInetAddress().toString();
-    }
-    
-    @Override
-    public UUID getUUID() {
-        
-        return uuid;
-    }
-    
-    @Override
-    public boolean passGiven() {
-        
-        return true;    // Password given before registration
+        return host;
     }
 }

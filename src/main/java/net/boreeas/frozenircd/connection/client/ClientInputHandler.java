@@ -15,9 +15,6 @@
  */
 package net.boreeas.frozenircd.connection.client;
 
-import java.util.logging.Level;
-import net.boreeas.frozenircd.config.SharedData;
-
 /**
  *
  * @author Boreeas
@@ -28,7 +25,7 @@ public interface ClientInputHandler {
     
     public void onModeChange(Client client, String modeString);
     
-    public void onConnect(Client client);
+    public void onUser(Client client);
     
     public void onDisconnect(Client client);
 }

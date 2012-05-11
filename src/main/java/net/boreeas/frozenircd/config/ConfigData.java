@@ -55,15 +55,19 @@ public class ConfigData {
             = new HashMap<String, String[]>();
     
     /**
-     * O-Lines parameter name
+     * O-Lines (Oper hosts) parameter name
      */
-    private final static String O_LINES = "o-lines";
+    private final static String O_LINES = "olines";
     private static Set<String> olinesSet; 
+    
+    /**
+     * U-Lines (Server link) parameter name
+     */
+    private final static String U_LINES = "ulines";
+    private static Set<String[]> ulinesSet;
     
     static {
         defaultOptions.put(ConfigKey.BLACKLISTED_NICKS.getKey(), 
-                            new String[0]);
-        defaultOptions.put(ConfigKey.LINKS.getKey(), 
                             new String[0]);
         defaultOptions.put(ConfigKey.DESCRIPTION.getKey(), 
                             new String[]{"An IRC server"});
@@ -105,6 +109,7 @@ public class ConfigData {
         putSingleDefaultOption(ConfigKey.USING_PASS, "false");
         putSingleDefaultOption(ConfigKey.PORTS, "6667");
         putSingleDefaultOption(ConfigKey.LOGGING_LEVEL, "0");
+        putSingleDefaultOption(ConfigKey.USER_PASS, "");
     }
     
     /**
@@ -268,7 +273,7 @@ public class ConfigData {
         
         String[] values = getConfigOption(key.getKey());
         if (values == null) {
-            String error = String.format("Missing key %s", key);
+            String error = String.format("Missing key %s (config option: %s)", key, key.getKey());
             throw new IncompleteConfigurationException(error);
         }
         
@@ -321,6 +326,33 @@ public class ConfigData {
         return olinesSet;
     }
     
+    public static Set<String[]> getULines() {
+        
+        if (ulinesSet == null) {
+            
+            ulinesSet = new HashSet<String[]>();
+            String[] ulines = getLines(U_LINES);
+            
+            if (!(ulines == null)) {
+                
+                for (String uline: ulines) {
+                    
+                    String[] options = uline.split(":");
+                    if (options.length < 2) {
+                        SharedData.logger.log(Level.SEVERE, "Incorrect link entry format for entry \"{0}\": Accepted formats are <host>:<port>:<password>, <host>::<password> or <host>:<password>", uline);
+                        continue;
+                    } else if (options.length < 3) {
+                        SharedData.logger.log(Level.WARNING, "Found link entry format <host>:<pass> in entry {0}, extending to \"{1}:6667:{2}\"", new Object[]{uline, options[0], options[1]});
+                    } else if (options[1].equals("")) {
+                        SharedData.logger.log(Level.WARNING, "Found link entry format <host>::<pass> in entry {0}, extending to \"{1}:6667:{2}\"", new Object[]{uline, options[0], options[2]});
+                    }
+                }
+            }
+        }
+        
+        return ulinesSet;
+    }
+    
     /**
      * Matches a host against all lines in the line set.
      * @param lineSet The lines to check
@@ -346,7 +378,7 @@ public class ConfigData {
      */
     public static boolean matchesOLine(String host) {
         
-        return matches(olinesSet, host);
+        return matches(getOLines(), host);
     }
     
     public static boolean checkOperPassword(String name, String password) throws NoSuchAlgorithmException, IncompleteConfigurationException {

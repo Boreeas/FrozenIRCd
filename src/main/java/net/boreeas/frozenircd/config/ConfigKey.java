@@ -26,19 +26,20 @@ public enum ConfigKey {
     HOST                ("hostname"),
     DESCRIPTION         ("description"),
     USING_PASS          ("using-pass"),
-    PASS                ("pass"),
     PORTS               ("ports"),
     
-    MIN_NICK_LENGTH     ("min-nick-length"),
-    MAX_NICK_LENGTH     ("max-nick-length"),
-    NICK_PATTERN        ("nick-pattern"),
-    BLACKLISTED_NICKS   ("blacklisted-nicks"),
+    MIN_NICK_LENGTH     ("nick.length.min"),
+    MAX_NICK_LENGTH     ("nick.length.max"),
+    NICK_PATTERN        ("nick.pattern"),
+    BLACKLISTED_NICKS   ("nick.blacklist"),
     
-    LINKS               ("links"),
     TOKEN               ("token"),
-    LINK_PASS           ("linkpass"),
     
-    LOGGING_LEVEL       ("logging-level");
+    LINK_PASS           ("password.server"),
+    SERVICE_PASS        ("password.service"),
+    USER_PASS           ("password.user"),
+    
+    LOGGING_LEVEL       ("logging.level");
     
     
     
