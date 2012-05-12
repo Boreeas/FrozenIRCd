@@ -30,7 +30,9 @@ import java.util.logging.Level;
 import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSocket;
 import net.boreeas.frozenircd.Interruptable;
-import net.boreeas.frozenircd.config.SharedData;
+import net.boreeas.frozenircd.config.ConfigData;
+import net.boreeas.frozenircd.config.ConfigKey;
+import net.boreeas.frozenircd.utils.SharedData;
 
 /**
  *
@@ -50,6 +52,7 @@ public class ConnectionListener extends Thread implements Interruptable {
     
     public ConnectionListener(String host, int port, boolean useSSL) throws IOException {
         
+        super("ConnListener[" + host + ":" + port + "]");
         this.useSSL = useSSL;
         
         if (!useSSL) {
@@ -67,6 +70,8 @@ public class ConnectionListener extends Thread implements Interruptable {
             serverSocket.bind(new InetSocketAddress(port));
         }
         
+        serverSocket.setSoTimeout(1000);
+        
         SharedData.logger.log(Level.INFO, "Binding to {0}:{1} successful", new Object[]{serverSocket.getInetAddress(), Integer.toString(serverSocket.getLocalPort())});
     }
     
@@ -81,65 +86,19 @@ public class ConnectionListener extends Thread implements Interruptable {
                 final Client client = new Client((useSSL) ? (SSLSocket) socket : socket, useSSL);
                 
                 // Check for hostname
-                new Thread(new Runnable() {
-
-                    public void run() {
-                        
-                        client.sendNotice("AUTH", "*** Looking up your hostname");
-                        client.setHostname(socket.getInetAddress().getCanonicalHostName());
-                        client.sendNotice("AUTH", "*** Found your hostname");
-                    }
-                }).start();
+                new HostnameDaemon(client, socket).start();
+                
                 // Check for identd
-                new Thread(new Runnable() {
-
-                    public void run() {
-                        
-                        client.sendNotice("AUTH", "*** Checking Ident");
-                        try {
-                            Socket identdSocket = new Socket(socket.getInetAddress(), 113);
-                            identdSocket.setSoTimeout(10000);
-                            
-                            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(identdSocket.getOutputStream()));
-                            writer.write(String.format("%s, %s", socket.getPort(), socket.getLocalPort()));
-                            
-                            
-                            String id = parseIdentResponse(
-                                            new BufferedReader(
-                                                    new InputStreamReader(
-                                                            identdSocket.getInputStream())).readLine());
-                            
-                            if (id == null || id.length() == 0) {
-                                throw new IOException();    // No ident reponse
-                            }
-                            
-                            client.setIdentified(true);
-                            client.setUsername(id);
-                            
-                        } catch (SocketTimeoutException ex) {
-                            client.sendNotice("AUTH", "*** Ident reponse timed out");
-                        } catch (IOException ex) {
-                            client.sendNotice("AUTH", "*** No Ident reponse");
-                        }
-                    }
-                    
-                    public String parseIdentResponse(String response) {
-                        
-                        String[] fields = response.split(" ?: ?");
-                        if (fields.length < 4) {
-                            return null;
-                        }
-                        
-                        if (!fields[1].equalsIgnoreCase("USERID")) {
-                            return null;
-                        }
-                        
-                        return response.trim();
-                    }
-                }).start();
+                new IdentDaemon(client, socket).start();
+                
+                // Wait for connection timeout
+                new ConnectTimeoutDaemon(client).start();
                 
                 client.start();
                 SharedData.connectionPool.addConnection(client.getUUID(), client);
+            } catch (SocketTimeoutException ex) {
+                
+                // Forget about it - this is only to prevent endless blocks
             } catch (IOException ex) {
                 
                 SharedData.logger.log(Level.SEVERE, "Unable to accept incoming connection on port " + serverSocket.getLocalPort(), ex);

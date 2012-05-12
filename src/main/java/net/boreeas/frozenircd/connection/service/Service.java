@@ -25,7 +25,7 @@ import net.boreeas.frozenircd.Interruptable;
 import net.boreeas.frozenircd.config.ConfigData;
 import net.boreeas.frozenircd.config.ConfigKey;
 import net.boreeas.frozenircd.config.Reply;
-import net.boreeas.frozenircd.config.SharedData;
+import net.boreeas.frozenircd.utils.SharedData;
 import net.boreeas.frozenircd.connection.Connection;
 import net.boreeas.frozenircd.connection.client.ClientInputHandler;
 

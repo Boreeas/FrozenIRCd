@@ -15,6 +15,7 @@
  */
 package net.boreeas.frozenircd.config;
 
+import net.boreeas.frozenircd.utils.SharedData;
 import java.io.File;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
@@ -24,7 +25,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import net.boreeas.frozenircd.utils.HashUtils;
 
 /**
@@ -37,16 +37,19 @@ public class ConfigData {
      * The general configuration settings
      */
     private static Config config;
+    public static final String CONFIG = "config";
     
     /**
      * The "lines" configuration file
      */
     private static Config lines;
+    public static final String LINES = "lines";
     
     /**
      * Oper passwords
      */
     private static Config opers;
+    public static final String OPERS = "opers";
     
     /**
      * Default settings for certain options
@@ -110,6 +113,9 @@ public class ConfigData {
         putSingleDefaultOption(ConfigKey.PORTS, "6667");
         putSingleDefaultOption(ConfigKey.LOGGING_LEVEL, "0");
         putSingleDefaultOption(ConfigKey.USER_PASS, "");
+        putSingleDefaultOption(ConfigKey.PING_FREQUENCY, "600");
+        putSingleDefaultOption(ConfigKey.PING_TIMEOUT, "180");
+        putSingleDefaultOption(ConfigKey.CONNECT_TIMEOUT, "60");
     }
     
     /**
@@ -152,7 +158,7 @@ public class ConfigData {
         
         if (config == null) {
             
-            config = loadFile("Config");
+            config = loadFile(CONFIG);
             
             // Save on shutdown
             Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -180,7 +186,7 @@ public class ConfigData {
         
         if (lines == null) {
             
-            lines = loadFile("Lines");
+            lines = loadFile(LINES);
             
             
             // Lines will be kept in a seperate set for ease of access, therefore we
@@ -192,7 +198,8 @@ public class ConfigData {
 
                     SharedData.logger.log(Level.INFO, "Rewriting lines to disk");
 
-                    lines.set(O_LINES, olinesSet);
+                    lines.set(O_LINES, olinesSet.toArray());
+                    lines.set(U_LINES, ulinesSet.toArray());
                     // TODO Add all the lines
 
 
@@ -215,7 +222,7 @@ public class ConfigData {
         
         if (opers == null) {
             
-            opers = loadFile("Opers");
+            opers = loadFile(OPERS);
             
             // Save on shutdown
             Runtime.getRuntime().addShutdownHook(new Thread() {

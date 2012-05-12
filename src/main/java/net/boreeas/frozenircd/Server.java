@@ -15,43 +15,31 @@
  */
 package net.boreeas.frozenircd;
 
+import java.util.logging.Logger;
 import net.boreeas.frozenircd.connection.ConnectionListener;
 import net.boreeas.frozenircd.connection.server.ServerLink;
-import net.boreeas.frozenircd.config.IncompleteConfigurationException;
-import java.util.logging.Logger;
-import net.boreeas.frozenircd.config.Config;
-import net.boreeas.frozenircd.config.SharedData;
+import net.boreeas.frozenircd.utils.SharedData;
 import java.io.IOException;
-import java.net.ServerSocket;
-import java.net.Socket;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.logging.Level;
 import net.boreeas.frozenircd.config.ConfigData;
 import net.boreeas.frozenircd.config.ConfigKey;
+import net.boreeas.frozenircd.connection.Connection;
 
 /**
  * Represents the Server.
  * @author Boreeas
  */
-public final class Server {
-    
-    
-    
-    /**
-     * The set of all servers linked to this server.
-     */
-    // TODO Move this to a pool maybe
-    //private Set<ServerLink> linkedServers = new CopyOnWriteArraySet<ServerLink>();
-    
-    private Set<ConnectionListener> connectionListeners;
+public enum Server {
     
     /**
      * The server instance.
      */
-    private static Server instance;
+    INSTANCE;
+    
+    private Set<ConnectionListener> connectionListeners;
     
     
     /**
@@ -60,9 +48,13 @@ public final class Server {
     private Server() {
         
         connectionListeners = new HashSet<ConnectionListener>();
+    }
+    
+    public void start() {
         
         linkServers();
         startListeners();
+        startPingDaemon();
     }
     
     public void startListeners() {
@@ -113,21 +105,10 @@ public final class Server {
         SharedData.logger.log(Level.INFO, "Spinning down");
     }
     
-    /**
-     * Returns the running server instance. Will create a new server if none exists.
-     * @return The running server instance.
-     */
-    public static synchronized Server getServer() {
+    private void startPingDaemon() {
         
-        if (instance == null) {
-            
-            instance = new Server();
-        }
-        
-        return instance;
+        new PingDaemon().start();
     }
-    
-    
 
     /**
      * Establishes a link connection to all servers specified in the config

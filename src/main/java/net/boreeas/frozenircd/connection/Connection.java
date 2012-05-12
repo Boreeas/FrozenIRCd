@@ -23,7 +23,8 @@ import java.net.SocketTimeoutException;
 import java.util.UUID;
 import java.util.logging.Level;
 import net.boreeas.frozenircd.Interruptable;
-import net.boreeas.frozenircd.config.SharedData;
+import net.boreeas.frozenircd.config.Reply;
+import net.boreeas.frozenircd.utils.SharedData;
 import net.boreeas.frozenircd.connection.client.ClientInputHandler;
 
 /**
@@ -42,6 +43,14 @@ public abstract class Connection extends Thread implements Interruptable {
     protected UUID uuid = UUID.randomUUID();
     
     private String connectPassword;
+    
+    private long lastPingReplyTime = System.currentTimeMillis();
+    private String lastPingText = null;
+    
+    public Connection() {
+        
+        super("Connection[]");
+    }
     
     @Override
     public void run() {
@@ -88,6 +97,8 @@ public abstract class Connection extends Thread implements Interruptable {
                 SharedData.logger.log(Level.INFO, String.format("IOException while closing streams to %s", socket.getInetAddress().getHostName()), ioe);
             }
         }
+        
+        SharedData.connectionPool.removeConnection(getUUID());
     }
     
     /**
@@ -115,10 +126,11 @@ public abstract class Connection extends Thread implements Interruptable {
     public void disconnect(String message) {
         
         send(String.format("QUIT :%s", message));
-        requestInterrupt();
-        closed = true;
+        SharedData.logger.log(Level.INFO, "Closing connection to {0} ({1})", new Object[]{this, message});
         
-        SharedData.connectionPool.removeConnection(getUUID());
+        requestInterrupt();
+        
+        closed = true;
     }
     
     /**
@@ -147,12 +159,28 @@ public abstract class Connection extends Thread implements Interruptable {
         
         return uuid;
     }
+    
+    public String getPingRequestText() {
+        
+        return lastPingText;
+    }
+    
+    public long getLastPingTime() {
+        
+        return lastPingReplyTime;
+    }
         
     
     @Override
     public String toString() {
         
         return socket.getInetAddress().toString();
+    }
+    
+    public void sendPingRequest(String request) {
+        
+        send(Reply.OTHER_PING.format(request));
+        this.lastPingText = request;
     }
     
     /**

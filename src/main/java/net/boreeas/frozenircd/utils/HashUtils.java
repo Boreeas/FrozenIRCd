@@ -18,7 +18,6 @@ package net.boreeas.frozenircd.utils;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.logging.Level;
-import net.boreeas.frozenircd.config.SharedData;
 
 /**
  *

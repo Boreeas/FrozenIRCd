@@ -29,34 +29,18 @@ public enum ClientCommand {
     NICK            ("nick"),
     PASS            ("pass"),
     OPER            ("oper"),
-    MODE            ("mode");
+    MODE            ("mode"),
+    STOP            ("stop");
     
     
     private String command;
-    private static Map<String, ClientCommand> commands;
-    
     
     private ClientCommand(String command) {
         
         this.command = command;
-        
-        finalizeConstructor();
-    }
-    
-    private void finalizeConstructor() {
-        
-        if (commands == null) {
-            commands = new HashMap<String, ClientCommand>();
-        }
-        commands.put(command.toUpperCase(), this);
     }
     
     public String getCommand() {
         return command;
-    }
-    
-    public static ClientCommand forName(String name) {
-        
-        return commands.get(name.toUpperCase());
     }
 }

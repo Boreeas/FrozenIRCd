@@ -20,6 +20,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.UUID;
+import net.boreeas.frozenircd.config.ConfigData;
+import net.boreeas.frozenircd.config.ConfigKey;
+import net.boreeas.frozenircd.connection.client.Client;
 
 /**
  *
@@ -77,6 +80,29 @@ public class ConnectionPool {
             if (!entry.getValue().equals(source)) {
                 
                 entry.getValue().send(message);
+            }
+        }
+    }
+    
+    public void broadcast(String message, BroadcastFilter filter) {
+        
+        for (Entry<UUID, Connection> entry: pool.entrySet()) {
+            
+            if (filter.sendToConnection(entry.getValue())) {
+                
+                entry.getValue().send(message);
+            }
+        }
+    }
+    
+    public void notifyClients(String message) {
+        
+        for (Entry<UUID, Connection> entry: pool.entrySet()) {
+            
+            if (entry.getValue() instanceof Client) {
+                
+                Client client = (Client)entry.getValue();
+                client.sendNotice(ConfigData.getFirstConfigOption(ConfigKey.HOST), client.getSafeNickname(), message);
             }
         }
     }

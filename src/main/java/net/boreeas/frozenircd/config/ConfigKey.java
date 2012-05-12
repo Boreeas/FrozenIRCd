@@ -33,6 +33,10 @@ public enum ConfigKey {
     NICK_PATTERN        ("nick.pattern"),
     BLACKLISTED_NICKS   ("nick.blacklist"),
     
+    PING_FREQUENCY      ("ping.frequency"),
+    PING_TIMEOUT        ("ping.timeout"),
+    CONNECT_TIMEOUT     ("connect.timeout"),
+    
     TOKEN               ("token"),
     
     LINK_PASS           ("password.server"),

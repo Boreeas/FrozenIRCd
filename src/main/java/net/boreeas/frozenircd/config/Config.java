@@ -15,6 +15,7 @@
  */
 package net.boreeas.frozenircd.config;
 
+import net.boreeas.frozenircd.utils.SharedData;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;

@@ -23,13 +23,13 @@ public enum Reply {
     
     //<editor-fold defaultstate="collapsed" desc="RPL - Standard replies">
     /**
-     * Send to indicate a successful umode change.<br />
+     * Sent to indicate a successful umode change.<br />
      * Parameters: nick, nick, flag string
      */
-    RPL_UMODEIS             ("221 %s :Usermode for %s is %s", 3),
+    RPL_UMODEIS             ("221 %s :Usermode for %s is +%s", 3),
     
     /**
-     * Send to indicate a successfully executed OPER command.<br />
+     * Sent to indicate a successfully executed OPER command.<br />
      * Parameters: nick
      */
     RPL_YOUREOPER           ("381 %s :Successfully set OPER status", 1),
@@ -37,65 +37,85 @@ public enum Reply {
     
     //<editor-fold defaultstate="collapsed" desc="ERR - Error messages">
     /**
-     * Send if a command by a client was not recognized.<br />
+     * Sent if a command by a client was not recognized.<br />
      * Parameters: nick, command
      */
     ERR_UNKNOWNCOMMAND      ("421 %s :%s: Unknown command", 2),
     
     /**
-     * Send whenever a command expects a nickname as a parameter but is not given any.<br />
+     * Sent whenever a command expects a nickname as a parameter but is not given any.<br />
      * Parameters: nick
      */
     ERR_NONICKNAMEGIVEN     ("431 %s :No nickname given", 1),
     
     /**
-     * Send when a NICK command fails for a general reason.<br />
+     * Sent when a NICK command fails for a general reason.<br />
      * Parameters: nick, target nick, reason
      */
     ERR_ERRONEUSNICKNAME    ("432 %s :%s: Illegal nickname: %s", 3),
     
     /**
-     * Send when a NICK command fails because the target nick is already in use.<br />
+     * Sent when a NICK command fails because the target nick is already in use.<br />
      * Parameters: nick, target nick
      */
     ERR_NICKNAMEINUSE       ("433 %s :Nickname already in use: %s", 2),
     
     /**
-     * Send when a command expects more parameters than were given by the client.<br />
+     * Sent when a command expects more parameters than were given by the client.<br />
      * Parameters: nick, command, expected parameters
      */
     ERR_NEEDMOREPARAMS      ("461 %s :%s: Not enough parameters. Parameters: %s", 3),
     
     /**
-     * Send when a client attempts to re-register a connection, i.e. sending one
+     * Sent when a client attempts to re-register a connection, i.e. sending one
      * of (USER, SERVICE, SERVER) after registering as a user.<br />
      * Parameters: nick
      */
     ERR_ALREADYREGISTERED   ("462 %s :You may not reregister", 1),
     
     /**
-     * Send when a client attempts to use an incorrect password.<br />
+     * Sent when a client attempts to use an incorrect password.<br />
      * Parameters: nick
      */
     ERR_PASSWDMISMATCH      ("464 %s :Invalid password", 1),
     
     /**
-     * Send when a client whose host does not match any o-line attempts to use the OPER command.<br />
+     * Sent when a client whose host does not match any o-line attempts to use the OPER command.<br />
      * Parameters: nick
      */
     ERR_NOOPERHOST          ("491 %s :Your host did not match any o-line", 1),
     
     /**
-     * Send when a client attempts to set a mode that the server does not know or support.<br />
+     * Sent when a client attempts to set a mode that the server does not know or support.<br />
      * Parameters: nick, unknown mode
      */
     ERR_UMODEUNKNOWNFLAG    ("501 %s :Unknown mode flag %s", 2),
     
     /**
-     * Send when a client attempts to set umodes for a client other than themselves.<br />
+     * Sent when a client attempts to set umodes for a client other than themselves.<br />
      * Parameters: nick
      */
-    ERR_USERSDONTMATCH      ("502 %s :Can't set mode on other user", 1);
+    ERR_USERSDONTMATCH      ("502 %s :Can't set mode on other user", 1),
+    
+    /**
+     * Sent when an OPER-command is used by a non-OPER.<br />
+     * Parameters: nick
+     */
+    ERR_NOTOPER             ("999 %s :Oper status is needed", 1),
+    //</editor-fold>
+    
+    //<editor-fold defaultstate="collapsed" desc="OTHER - Not really numerics, but often used anyways">
+    /**
+     * Sent as a reply to a PING request.<br />
+     * Parameters: Server hostname, ping argument
+     */
+    OTHER_PONG              ("PONG %s :%s", 2),
+    
+    /**
+     * Sent as alive check.<br />
+     * Parameters: ping argument
+     */
+    OTHER_PING              ("PING :%s", 1);
     //</editor-fold>
     
     

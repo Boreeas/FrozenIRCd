@@ -29,7 +29,7 @@ import java.util.logging.Level;
 import net.boreeas.frozenircd.config.ConfigData;
 import net.boreeas.frozenircd.config.ConfigKey;
 import net.boreeas.frozenircd.config.Reply;
-import net.boreeas.frozenircd.config.SharedData;
+import net.boreeas.frozenircd.utils.SharedData;
 import net.boreeas.frozenircd.connection.Connection;
 import net.boreeas.frozenircd.connection.service.Service;
 import net.boreeas.frozenircd.connection.service.ServiceCommandHandler;
@@ -73,21 +73,6 @@ public class Client extends Connection {
         
         try {
             
-            SharedData.logger.log(Level.parse("0"), "[-> {0}] {1}", new Object[]{socket.getInetAddress(), line});
-            
-            writer.write(String.format(":%s %s\r\n", ConfigData.getFirstConfigOption(ConfigKey.HOST), line));
-            writer.flush();
-        } catch (IOException ioe) {
-            
-            SharedData.logger.log(Level.SEVERE, String.format("Could not write to %s, closing connection", socket.getInetAddress()), ioe);
-            disconnect(ioe.getMessage());
-        }
-    }
-    
-    public void sendWithoutPrefix(String line) {
-        
-        try {
-            
             SharedData.logger.log(Level.parse("0"), "[-> {0}] :{1}", new Object[]{socket.getInetAddress(), line});
             writer.write(String.format(":%s\r\n", line));
             writer.flush();
@@ -98,34 +83,23 @@ public class Client extends Connection {
         }
     }
     
-    public void sendNotice(String sender, String message) {
+    /**
+     * Sends the text in the standard format, that is <code>:<serverhostname> <line><\r\n></code>
+     * @param The line to send
+     */
+    public void sendStandardFormat(String line) {
         
-        try {
-            
-            String toSend = String.format(":%s NOTICE %s :%s", ConfigData.getFirstConfigOption(ConfigKey.HOST), sender, message);
-            SharedData.logger.log(Level.parse("0"), "[-> {0}] {1}", new Object[]{socket.getInetAddress(), toSend});
-            writer.write(String.format("%s\r\n", toSend));
-            writer.flush();
-        } catch (IOException ioe) {
-            
-            SharedData.logger.log(Level.SEVERE, String.format("Could not write to %s, closing connection", socket.getInetAddress()), ioe);
-            disconnect(ioe.getMessage());
-        }
+        send(String.format("%s %s", ConfigData.getFirstConfigOption(ConfigKey.HOST), line));
     }
     
-    public void sendPrivateMessage(String sender, String message) {
+    public void sendNotice(String senderHostmask, String receiver, String message) {
         
-        try {
-            
-            String toSend = String.format(":%s PRIVMSG %s :%s", ConfigData.getFirstConfigOption(ConfigKey.HOST), sender, message);
-            SharedData.logger.log(Level.parse("0"), "[-> {0}] {1}", new Object[]{socket.getInetAddress(), toSend});
-            writer.write(String.format("%s\r\n", toSend));
-            writer.flush();
-        } catch (IOException ioe) {
-            
-            SharedData.logger.log(Level.SEVERE, String.format("Could not write to %s, closing connection", socket.getInetAddress()), ioe);
-            disconnect(ioe.getMessage());
-        }
+        send(String.format("%s NOTICE %s :%s", senderHostmask, receiver, message));
+    }
+    
+    public void sendPrivateMessage(String senderHostmask, String receiver, String message) {
+        
+        send(String.format("%s PRIVMSG %s :%s", senderHostmask, receiver, message));
     }
     
     public void kill(String reason) {
@@ -169,6 +143,12 @@ public class Client extends Connection {
         onModeChange();
     }
     
+    public void addFlagByServer(char flag) {
+        
+        flags.add(flag);
+        onModeChange();
+    }
+    
     /**
      * Adds all chars in the string to the client
      * @param flagString 
@@ -203,6 +183,12 @@ public class Client extends Connection {
         
         flags.remove(flag);
         
+        onModeChange();
+    }
+    
+    public void removeFlagByServer(char flag) {
+        
+        flags.remove(flag);
         onModeChange();
     }
     
