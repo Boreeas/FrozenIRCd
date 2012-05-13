@@ -22,6 +22,8 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import net.boreeas.frozenircd.config.ConfigData;
+import net.boreeas.frozenircd.config.ConfigKey;
 import net.boreeas.frozenircd.connection.client.Client;
 
 /**
@@ -46,7 +48,8 @@ public class IdentDaemon extends Thread {
     @Override
     public void run() {
 
-        client.sendNotice("AUTH", client.getSafeNickname(), "*** Checking Ident");
+        client.sendNotice(ConfigData.getFirstConfigOption(ConfigKey.HOST), "AUTH", "*** Checking Ident");
+       
         try {
             Socket identdSocket = new Socket(socket.getInetAddress(), 113);
             identdSocket.setSoTimeout(10000);
@@ -69,10 +72,10 @@ public class IdentDaemon extends Thread {
 
         }
         catch (SocketTimeoutException ex) {
-            client.sendNotice("AUTH", client.getSafeNickname(), "*** Ident reponse timed out");
+            client.sendNotice(ConfigData.getFirstConfigOption(ConfigKey.HOST), "AUTH", "*** Ident reponse timed out");
         }
         catch (IOException ex) {
-            client.sendNotice("AUTH", client.getSafeNickname(), "*** No Ident reponse");
+            client.sendNotice(ConfigData.getFirstConfigOption(ConfigKey.HOST), "AUTH", "*** No Ident reponse");
         }
     }
 

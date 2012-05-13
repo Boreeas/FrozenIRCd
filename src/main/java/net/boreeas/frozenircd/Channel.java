@@ -13,33 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.boreeas.frozenircd.config;
+package net.boreeas.frozenircd;
+
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import net.boreeas.frozenircd.connection.client.Client;
 
 /**
  *
  * @author Boreeas
  */
-public enum ClientCommand {
+public class Channel {
     
-    PING            ("ping"),
-    PONG            ("pong"),
-    USER            ("user"),
-    NICK            ("nick"),
-    PASS            ("pass"),
-    OPER            ("oper"),
-    MODE            ("mode"),
-    QUIT            ("quit"),
-    STOP            ("stop");
-    
-    
-    private String command;
-    
-    private ClientCommand(String command) {
-        
-        this.command = command;
-    }
-    
-    public String getCommand() {
-        return command;
-    }
+    private Set<Character> channelmodes = new HashSet<Character>();
+    private Map<Client, Set<Character>> accessList = new HashMap<Client, Set<Character>>();
+    private Set<Client> clients = new HashSet<Client>();
 }

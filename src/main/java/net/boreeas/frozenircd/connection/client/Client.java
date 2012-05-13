@@ -347,7 +347,7 @@ public class Client extends Connection {
     
     public void onModeChange() {
         
-        send(Reply.RPL_UMODEIS.format(getSafeNickname(), getSafeNickname(), flags()));
+        sendStandardFormat(Reply.RPL_UMODEIS.format(getSafeNickname(), getSafeNickname(), flags()));
     }
     
     public Service toService(final ServiceCommandHandler handler, String newNick, String visibility, String type) {

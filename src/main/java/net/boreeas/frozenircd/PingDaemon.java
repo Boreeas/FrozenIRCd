@@ -39,10 +39,13 @@ public class PingDaemon extends Thread {
         int pingFreqMillis = 1000 * Integer.parseInt(ConfigData.getFirstConfigOption(ConfigKey.PING_FREQUENCY));
         int pingTimeoutMillis = 1000 * Integer.parseInt(ConfigData.getFirstConfigOption(ConfigKey.PING_TIMEOUT));
 
-        int timeSinceLastPingMillis = 1000 * Integer.MAX_VALUE;
+        int timeSinceLastPingMillis = pingFreqMillis;
 
+        System.out.println(pingTimeoutMillis + " (" + (pingTimeoutMillis / 1000) + " s)");
         while (true) {
 
+            SharedData.logger.log(Level.INFO, "Sending ping checks");
+            
             for (Connection connection : SharedData.connectionPool.getConnections()) {
 
                 // Disconnect if ping request sent
@@ -67,9 +70,14 @@ public class PingDaemon extends Thread {
 
                 timeSinceLastPingMillis = 0;
             }
+            
+            // Wait for next
             try {
-                // Wait for next
-                sleep(pingFreqMillis);
+                SharedData.logger.log(Level.SEVERE, "PingDaemon sleeping");
+                sleep(pingTimeoutMillis);
+                SharedData.logger.log(Level.SEVERE, "PingDaemon woke up");
+                
+                timeSinceLastPingMillis += pingTimeoutMillis;
             }
             catch (InterruptedException ex) {
                 SharedData.logger.log(Level.WARNING, "Unable to sleep in PING daemon", ex);

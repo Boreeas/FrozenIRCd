@@ -169,7 +169,13 @@ public abstract class Connection extends Thread implements Interruptable {
         
         return lastPingReplyTime;
     }
+    
+    public void updatePing(String key) {
         
+        if (key.equals(lastPingText)) {
+            lastPingReplyTime = System.currentTimeMillis();
+        }
+    }
     
     @Override
     public String toString() {

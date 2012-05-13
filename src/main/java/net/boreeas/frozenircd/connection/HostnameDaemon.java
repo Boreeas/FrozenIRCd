@@ -16,6 +16,8 @@
 package net.boreeas.frozenircd.connection;
 
 import java.net.Socket;
+import net.boreeas.frozenircd.config.ConfigData;
+import net.boreeas.frozenircd.config.ConfigKey;
 import net.boreeas.frozenircd.connection.client.Client;
 
 /**
@@ -40,8 +42,8 @@ public class HostnameDaemon extends Thread {
     @Override
     public void run() {
 
-        client.sendNotice("AUTH", client.getSafeNickname(), "*** Looking up your hostname");
+        client.sendNotice(ConfigData.getFirstConfigOption(ConfigKey.HOST), "AUTH", "*** Looking up your hostname");
         client.setHostname(socket.getInetAddress().getCanonicalHostName());
-        client.sendNotice("AUTH", client.getSafeNickname(), "*** Found your hostname");
+        client.sendNotice(ConfigData.getFirstConfigOption(ConfigKey.HOST), "AUTH", "*** Found your hostname");
     }
 }

@@ -97,6 +97,12 @@ public class SharedData {
     
     public static void onClientCommand(Client client, String command, String[] args) {
         
+        command = command.trim();
+        
+        if (command.equals("")) {
+            return;
+        }
+        
         try {
             
             ClientCommand cmd = ClientCommand.valueOf(command.toUpperCase());
@@ -108,6 +114,9 @@ public class SharedData {
                 
                 client.sendStandardFormat(Reply.ERR_UNKNOWNCOMMAND.format(client.getSafeNickname(), command));
             }
+        } catch (IllegalArgumentException ex) {
+
+            client.sendStandardFormat(Reply.ERR_UNKNOWNCOMMAND.format(client.getSafeNickname(), command));
         } catch (Exception ex) {
             
             client.sendNotice(getFirstConfigOption(HOST), client.getSafeNickname(), "Internal server error while processing command.");
@@ -273,6 +282,30 @@ public class SharedData {
                 }
                 
                 client.sendStandardFormat(Reply.OTHER_PONG.format(getFirstConfigOption(HOST), args[0]));
+            }
+        });
+        
+        clientCommands.put(ClientCommand.PONG, new ClientCommandHandler() {
+
+            public void onCommand(Client client, String[] args) {
+                
+                if (args.length == 0) {
+                    
+                    client.send(Reply.ERR_NEEDMOREPARAMS.format(client.getSafeNickname(), ClientCommand.PONG, "<key>"));
+                    return;
+                }
+                
+                client.updatePing(args[0]);
+            }
+        });
+        
+        clientCommands.put(ClientCommand.QUIT, new ClientCommandHandler() {
+
+            public void onCommand(Client client, String[] args) {
+                
+                String quitMessage = (args.length == 0) ? client.getSafeNickname() : joinArray(args);
+                
+                client.disconnect(quitMessage);
             }
         });
         
