@@ -27,7 +27,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import net.boreeas.frozenircd.Server;
-import net.boreeas.frozenircd.config.ClientCommand;
+import net.boreeas.frozenircd.command.ClientCommand;
 import net.boreeas.frozenircd.config.IncompleteConfigurationException;
 import net.boreeas.frozenircd.config.Reply;
 import net.boreeas.frozenircd.connection.client.Client;
@@ -45,8 +45,11 @@ import static net.boreeas.frozenircd.config.ConfigKey.*;
  * across the project
  * @author Boreeas
  */
-public class SharedData {
+public final class SharedData {
      
+    // Utility class empty constructor
+    private SharedData() {}
+    
     /**
      * The version of the protocol used for this implementation
      */
@@ -56,17 +59,6 @@ public class SharedData {
      * The identifier for this build
      */
     public static final String BUILD_IDENTIFIER = "frozen001a";
-    
-    /**
-     * All commands the server knows that can be executed by a client
-     */
-    private static Map<ClientCommand, ClientCommandHandler> clientCommands 
-            = new EnumMap<ClientCommand, ClientCommandHandler>(ClientCommand.class);
-    
-    /**
-     * All commands the server knows that can be executed by other servers
-     */
-    private static Map<String, ServerCommandHandler> serverCommands = new HashMap<String, ServerCommandHandler>();
     
     /**
      * The public logger object to be used by every class.
@@ -271,72 +263,6 @@ public class SharedData {
     
     private static void fillClientCommandMap() {
         
-        clientCommands.put(ClientCommand.PING, new ClientCommandHandler() {
-
-            public void onCommand(Client client, String[] args) {
-                
-                if (args.length < 1) {
-                    
-                    client.sendStandardFormat(Reply.ERR_NEEDMOREPARAMS.format(client.getSafeNickname(), ClientCommand.PING, "<message>"));
-                    return;
-                }
-                
-                client.sendStandardFormat(Reply.OTHER_PONG.format(getFirstConfigOption(HOST), args[0]));
-            }
-        });
-        
-        clientCommands.put(ClientCommand.PONG, new ClientCommandHandler() {
-
-            public void onCommand(Client client, String[] args) {
-                
-                if (args.length == 0) {
-                    
-                    client.send(Reply.ERR_NEEDMOREPARAMS.format(client.getSafeNickname(), ClientCommand.PONG, "<key>"));
-                    return;
-                }
-                
-                client.updatePing(args[0]);
-            }
-        });
-        
-        clientCommands.put(ClientCommand.QUIT, new ClientCommandHandler() {
-
-            public void onCommand(Client client, String[] args) {
-                
-                String quitMessage = (args.length == 0) ? client.getSafeNickname() : joinArray(args);
-                
-                client.disconnect(quitMessage);
-            }
-        });
-        
-        clientCommands.put(ClientCommand.USER, new ClientCommandHandler() {
-
-            public void onCommand(Client client, String[] args ) {
-                                
-                if (passwordNeeded && (client.passGiven() == null)) {
-                    
-                    return; // Drop silently
-                }
-                
-                String nickname = client.getSafeNickname();
-                
-                if (args.length < 4) {
-                    client.sendStandardFormat(Reply.ERR_NEEDMOREPARAMS.format(nickname, ClientCommand.USER, "<username> <unused> <unused> :<realname>"));
-                    return;
-                }
-                
-                if (client.userGiven()) {
-                    // ERR_ALREADYREGISTERED
-                    client.sendStandardFormat(Reply.ERR_ALREADYREGISTERED.format(nickname));
-                }
-                
-                if (!client.receivedIdentResponse()) {
-                    client.setUsername(args[0]);
-                }
-                client.setRealname(args[3]);
-                client.addFlag('i');
-            }
-        });
         
         clientCommands.put(ClientCommand.NICK, new ClientCommandHandler() {
 
@@ -537,7 +463,7 @@ public class SharedData {
                     Server.INSTANCE.close();
                 } else {
                     
-                    client.sendStandardFormat(Reply.ERR_NOTOPER.format(client.getSafeNickname()));
+                    client.sendStandardFormat(Reply.ERR_NOPRIVILEGES.format(client.getSafeNickname()));
                 }
             }
         });

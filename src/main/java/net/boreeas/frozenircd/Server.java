@@ -15,7 +15,6 @@
  */
 package net.boreeas.frozenircd;
 
-import java.util.logging.Logger;
 import net.boreeas.frozenircd.connection.ConnectionListener;
 import net.boreeas.frozenircd.connection.server.ServerLink;
 import net.boreeas.frozenircd.utils.SharedData;
@@ -26,7 +25,6 @@ import java.util.Set;
 import java.util.logging.Level;
 import net.boreeas.frozenircd.config.ConfigData;
 import net.boreeas.frozenircd.config.ConfigKey;
-import net.boreeas.frozenircd.connection.Connection;
 
 /**
  * Represents the Server.
@@ -121,8 +119,8 @@ public enum Server {
             
             try {
                 String host = data[0];
-                int port = (data[2].matches("[0-9]+")) ? Integer.parseInt(data[1]) : 6667;
-                String password = (data.length >= 3) ? data[2] : data[1];
+                int port = (data[1].matches("[0-9]+")) ? Integer.parseInt(data[1]) : 6667;
+                String password = data[2];
 
                 ServerLink newLink = new ServerLink(host, port, password);
                 SharedData.connectionPool.addConnection(newLink.getUUID(), newLink);

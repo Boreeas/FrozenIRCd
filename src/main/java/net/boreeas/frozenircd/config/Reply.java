@@ -80,6 +80,12 @@ public enum Reply {
     ERR_PASSWDMISMATCH      ("464 %s :Invalid password", 1),
     
     /**
+     * Sent when an OPER-command is used by a non-OPER.<br />
+     * Parameters: nick
+     */
+    ERR_NOPRIVILEGES             ("481 %s :Oper status is needed", 1),
+    
+    /**
      * Sent when a client whose host does not match any o-line attempts to use the OPER command.<br />
      * Parameters: nick
      */
@@ -96,12 +102,6 @@ public enum Reply {
      * Parameters: nick
      */
     ERR_USERSDONTMATCH      ("502 %s :Can't set mode on other user", 1),
-    
-    /**
-     * Sent when an OPER-command is used by a non-OPER.<br />
-     * Parameters: nick
-     */
-    ERR_NOTOPER             ("999 %s :Oper status is needed", 1),
     //</editor-fold>
     
     //<editor-fold defaultstate="collapsed" desc="OTHER - Not really numerics, but often used anyways">

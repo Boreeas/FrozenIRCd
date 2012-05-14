@@ -23,9 +23,13 @@ import java.util.logging.Level;
  *
  * @author Boreeas
  */
-public class HashUtils {
+public final class HashUtils {
     
-    public static String SHA256(String s) throws NoSuchAlgorithmException {
+    // Utility class final constructor
+    private HashUtils() {}
+    
+    
+    public static String SHA256(final String s) throws NoSuchAlgorithmException {
 
         MessageDigest algorithm = null;
 

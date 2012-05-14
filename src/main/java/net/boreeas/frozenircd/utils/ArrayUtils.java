@@ -13,15 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.boreeas.frozenircd.connection.service;
-
-import net.boreeas.frozenircd.command.CommandHandler;
+package net.boreeas.frozenircd.utils;
 
 /**
  *
  * @author Boreeas
  */
-public interface ServiceCommandHandler extends CommandHandler<Service> {
+public final class ArrayUtils {
     
-    public void onCommand(Service service, String[] args, String argsAsString);
+    // Utility class private constuctor
+    private ArrayUtils(){}
 }
