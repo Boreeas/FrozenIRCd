@@ -51,7 +51,7 @@ public class Config {
     /**
      * The fields/values of the config file.
      */
-    private Map<String, String[]> fields = new HashMap<String, String[]>();
+    private Map<String, String[]> fields = new HashMap<>();
     
     /**
      * Indicates whether the config has been modified
@@ -88,7 +88,7 @@ public class Config {
             reader = new BufferedReader(new FileReader(backend));
         } catch (FileNotFoundException nfe) {
             
-            SharedData.logger.warning(String.format("Unable to read config input file: %s", backend));
+            SharedData.logger.warn(String.format("Unable to read config input file: %s", backend));
             return;
         }
         
@@ -103,7 +103,7 @@ public class Config {
             
             if (parts.length < 2) {
                 
-                SharedData.logger.warning(String.format("Encountered incomplete line %s in config file %s, ignoring", input, backend));
+                SharedData.logger.warn(String.format("Encountered incomplete line %s in config file %s, ignoring", input, backend));
                 continue;   //Skip incomplete lines
             }
             
@@ -153,21 +153,19 @@ public class Config {
             backend.createNewFile();
         }
         
-        // Re-read from disk to maintain comments
-        BufferedReader reader = new BufferedReader(new FileReader(backend));
+        List<String> fileData;
+        Set<String> savedKeys;
         
-        
-        List<String> fileData = new ArrayList<String>();
-        Set<String> savedKeys = new HashSet<String>();
-        
-        
-        String line = null;
-        while ((line = reader.readLine()) != null) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(backend))) {
             
-            fileData.add(line.trim());
+            fileData = new ArrayList<>();
+            savedKeys = new HashSet<>();
+            String line = null;
+            while ((line = reader.readLine()) != null) {
+                
+                fileData.add(line.trim());
+            }
         }
-        
-        reader.close();
         
         
         // Update all keys in the file
@@ -199,16 +197,15 @@ public class Config {
             }
         }
         
-        // Write everything back to the file
-        BufferedWriter writer = new BufferedWriter(new FileWriter(backend));
-        
-        for (String out: fileData) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(backend))) {
             
-            writer.write(String.format("%s%n", out));
+            for (String out: fileData) {
+                
+                writer.write(String.format("%s%n", out));
+            }
+            
+            writer.flush();
         }
-        
-        writer.flush();
-        writer.close();
         
         // File has been saved, so there is no difference between this and the data on the disk
         modified = false;

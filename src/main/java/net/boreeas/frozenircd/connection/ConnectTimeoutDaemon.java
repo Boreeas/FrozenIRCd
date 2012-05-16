@@ -15,7 +15,6 @@
  */
 package net.boreeas.frozenircd.connection;
 
-import java.util.logging.Level;
 import net.boreeas.frozenircd.config.ConfigData;
 import net.boreeas.frozenircd.config.ConfigKey;
 import net.boreeas.frozenircd.connection.client.Client;
@@ -46,7 +45,7 @@ public class ConnectTimeoutDaemon extends Thread {
             sleep(connectTimeoutMillis);
         }
         catch (InterruptedException ex) {
-            SharedData.logger.log(Level.WARNING, "Unable to sleep for CONNECT_TIMEOUT", ex);
+            SharedData.logger.warn("Unable to sleep for CONNECT_TIMEOUT", ex);
         }
 
         if (!client.registrationCompleted()) {

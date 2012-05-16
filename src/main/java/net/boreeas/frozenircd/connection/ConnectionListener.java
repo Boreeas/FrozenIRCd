@@ -16,22 +16,15 @@
 package net.boreeas.frozenircd.connection;
 
 import net.boreeas.frozenircd.connection.client.Client;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
-import java.util.logging.Level;
 import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSocket;
 import net.boreeas.frozenircd.Interruptable;
-import net.boreeas.frozenircd.config.ConfigData;
-import net.boreeas.frozenircd.config.ConfigKey;
 import net.boreeas.frozenircd.utils.SharedData;
 
 /**
@@ -52,7 +45,7 @@ public class ConnectionListener extends Thread implements Interruptable {
     
     public ConnectionListener(String host, int port, boolean useSSL) throws IOException {
         
-        super("ConnListener[" + host + ":" + port + "]");
+        super("ConnectionListener[" + host + ":" + port + "]");
         this.useSSL = useSSL;
         
         if (!useSSL) {
@@ -66,13 +59,16 @@ public class ConnectionListener extends Thread implements Interruptable {
         try {
             serverSocket.bind(new InetSocketAddress(host, port));
         } catch (SocketException ex) {
-            SharedData.logger.log(Level.SEVERE, "Unable to bind to address: {0} - Attempting to bind to default ip", ex.getMessage());
+            SharedData.logger.error(String.format("Unable to bind to address: %s - Attempting to bind to default ip", 
+                                                  ex.getMessage()));
+            
             serverSocket.bind(new InetSocketAddress(port));
         }
         
         serverSocket.setSoTimeout(1000);
         
-        SharedData.logger.log(Level.INFO, "Binding to {0}:{1} successful", new Object[]{serverSocket.getInetAddress(), Integer.toString(serverSocket.getLocalPort())});
+        SharedData.logger.info(String.format("Binding to %s:%s successful", serverSocket.getInetAddress(), 
+                                                                            serverSocket.getLocalPort()));
     }
     
     @Override
@@ -101,7 +97,7 @@ public class ConnectionListener extends Thread implements Interruptable {
                 // Forget about it - this is only to prevent endless blocks
             } catch (IOException ex) {
                 
-                SharedData.logger.log(Level.SEVERE, "Unable to accept incoming connection on port " + serverSocket.getLocalPort(), ex);
+                SharedData.logger.error("Unable to accept incoming connection on port " + serverSocket.getLocalPort(), ex);
             }
         }
     }

@@ -23,4 +23,48 @@ public final class ArrayUtils {
     
     // Utility class private constuctor
     private ArrayUtils(){}
+    
+    /**
+     * Appends a string to a string builder, prepending an empty space if the
+     * buffer already contains text.
+     * @param builder The builder used for storing the text
+     * @param toAdd The text to add to the builder
+     */
+    public static void appendToBuffer(StringBuilder builder, String toAdd) {
+        
+        if (builder.length() > 0) {
+            builder.append(" ");
+        }
+        
+        builder.append(toAdd);
+    }
+    
+    /**
+     * Concats an array of strings into a single string, using a whitespace
+     * character as separator.
+     * @param array The array that should be joined
+     * @return The string that has been created
+     */
+    public static String joinArray(String[] array) {
+        
+        return joinArray(array, 0);
+    }
+    
+    /**
+     * Concats an array of strings into a single string, starting with the
+     * string at the specified index.
+     * @param array The array that should be joined
+     * @param firstIndex The index at which to start
+     * @return The string that has been created.
+     */
+    public static String joinArray(String[] array, int firstIndex) {
+        
+        StringBuilder builder = new StringBuilder();
+        
+        for (int i = firstIndex; i < array.length; i++) {
+            appendToBuffer(builder, array[i]);
+        }
+        
+        return builder.toString();
+    }
 }

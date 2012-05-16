@@ -21,11 +21,9 @@ import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.util.UUID;
-import java.util.logging.Level;
 import net.boreeas.frozenircd.Interruptable;
 import net.boreeas.frozenircd.config.Reply;
 import net.boreeas.frozenircd.utils.SharedData;
-import net.boreeas.frozenircd.connection.client.ClientInputHandler;
 
 /**
  *
@@ -33,7 +31,7 @@ import net.boreeas.frozenircd.connection.client.ClientInputHandler;
  */
 public abstract class Connection extends Thread implements Interruptable {
     
-    private boolean closed = false;
+    protected boolean closed = false;
     private boolean interrupted = false;
     
     protected Socket socket;
@@ -72,7 +70,7 @@ public abstract class Connection extends Thread implements Interruptable {
 
                 if (!closed) {
                     // Ignore IOExceptions on closed connections
-                    SharedData.logger.log(Level.SEVERE, String.format("IOException while reading data from %s, closing connection.", socket.getInetAddress().getHostName()), ex);
+                    SharedData.logger.error(String.format("IOException while reading data from %s, closing connection.", socket.getInetAddress().getHostName()), ex);
                 }
 
                 break;
@@ -94,7 +92,7 @@ public abstract class Connection extends Thread implements Interruptable {
             // Not much we can do here anyways
             if (!closed) {
                 // Ignore IOExceptions on closed connections
-                SharedData.logger.log(Level.INFO, String.format("IOException while closing streams to %s", socket.getInetAddress().getHostName()), ioe);
+                SharedData.logger.info(String.format("IOException while closing streams to %s", socket.getInetAddress().getHostName()), ioe);
             }
         }
         
@@ -125,12 +123,12 @@ public abstract class Connection extends Thread implements Interruptable {
      */
     public void disconnect(String message) {
         
-        send(String.format("QUIT :%s", message));
-        SharedData.logger.log(Level.INFO, "Closing connection to {0} ({1})", new Object[]{this, message});
-        
-        requestInterrupt();
+        SharedData.logger.info(String.format("Closing connection to {0} ({1})", this, message));
         
         closed = true;
+        requestInterrupt();
+        
+        send(String.format("ERROR :Closing link: %s", message));
     }
     
     /**

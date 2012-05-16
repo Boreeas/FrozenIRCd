@@ -15,6 +15,10 @@
  */
 package net.boreeas.frozenircd.command;
 
+import net.boreeas.frozenircd.Server;
+import net.boreeas.frozenircd.config.IncompleteConfigurationException;
+import java.security.NoSuchAlgorithmException;
+import net.boreeas.frozenircd.utils.HashUtils;
 import net.boreeas.frozenircd.utils.ArrayUtils;
 import net.boreeas.frozenircd.config.Reply;
 import net.boreeas.frozenircd.connection.Connection;
@@ -48,9 +52,42 @@ public class ClientCommandParser {
         
         switch (command) {
             
-            case (PING):
+            case PING:
                 onPingCommand(client, args);
                 break;
+                
+            case PONG:
+                onPongCommand(client, args);
+                break;
+                
+            case MODE:
+                onModeCommand(client, args);
+                break;
+                
+            case NICK:
+                onNickCommand(client, args);
+                break;
+                
+            case OPER:
+                onOperCommand(client, args);
+                break;
+                
+            case PASS:
+                onPassCommand(client, args);
+                break;
+                
+            case QUIT:
+                onQuitCommand(client, args);
+                break;
+                
+            case STOP:
+                onStopCommand(client, args);
+                break;
+                
+            case USER:
+                onUserCommand(client, args);
+                break;
+                
             
             
             default:
@@ -85,7 +122,7 @@ public class ClientCommandParser {
     
     private static void onQuitCommand(Client client, String[] args) {
 
-        String quitMessage = ( args.length == 0 ) ? client.getSafeNickname() : joinArray(args);
+        String quitMessage = ( args.length == 0 ) ? client.getSafeNickname() : ArrayUtils.joinArray(args);
 
         client.disconnect(quitMessage);
     }
@@ -150,6 +187,155 @@ public class ClientCommandParser {
         } else {
             
             client.setNickname(args[0]);
+        }
+    }
+    
+    private static void onPassCommand(Client client, String[] args) {
+
+        if (!SharedData.passwordNeeded) {
+            return; // PASS ignored if none is required
+        }
+
+        if (client.passGiven() != null) {
+
+            client.sendStandardFormat(Reply.ERR_ALREADYREGISTERED.format(client.getSafeNickname()));
+            return;
+        }
+
+        if (args.length < 1) {
+
+            client.sendStandardFormat(Reply.ERR_NEEDMOREPARAMS.format(client.getSafeNickname(), PASS, "<password>"));
+            return;
+        }
+
+        String hash;
+        try {
+            hash = HashUtils.SHA256(args[0]);
+        }
+        catch (NoSuchAlgorithmException ex) {
+            SharedData.logger.error("Disconnecting user because password hash could not be calculated.", ex);
+            client.disconnect("Password could not be matched - hash algorithm defect.");
+            return;
+        }
+
+        if (hash.equals(getFirstConfigOption(USER_PASS))) {
+
+            client.sendNotice(getFirstConfigOption(HOST), client.getSafeNickname(), "*** PASS accepted");
+            client.setPassGiven(true);
+        } else {
+
+            client.disconnect("Please specify the password using the PASS command");
+        }
+    }
+    
+    private static void onOperCommand(Client client, String[] args) {
+
+        if (!client.registrationCompleted()) {
+            return; // Drop any commands before registration is complete
+        }
+
+        // Check for parameter completeness
+        if (args.length < 2) {
+
+            client.sendStandardFormat(Reply.ERR_NEEDMOREPARAMS.format(client.getSafeNickname(), OPER, "<name> <password>"));
+            return;
+        }
+
+        // Check if the user's host matches any o-line
+        if (!matchesOLine(client.getHostname())) {
+
+            client.sendStandardFormat(Reply.ERR_NOOPERHOST.format(client.getSafeNickname()));
+            return;
+        }
+
+        // Check password
+        try {
+            if (!checkOperPassword(args[0], args[1])) {
+
+                client.sendStandardFormat(Reply.ERR_PASSWDMISMATCH.format(client.getSafeNickname()));
+                return;
+            }
+        }
+        catch (NoSuchAlgorithmException ex) {
+
+            // Something went seriously wrong here
+            SharedData.logger.error("Unable to generate password hash for OPER", ex);
+            client.sendNotice(getFirstConfigOption(HOST), client.getSafeNickname(), "Unable to generate password hash");
+            return;
+        }
+        catch (IncompleteConfigurationException ex) {
+
+            // The given name is not configured as oper
+            client.sendNotice(getFirstConfigOption(HOST), client.getSafeNickname(), "No such oper: " + args[0]);
+            return;
+        }
+
+        client.sendStandardFormat(Reply.RPL_YOUREOPER.format(client.getSafeNickname()));
+        client.addFlagByServer('o');
+    }
+    
+    private static void onModeCommand(Client client, String[] args) {
+
+        if (!client.registrationCompleted()) {
+            return;
+        }
+
+        if (args.length < 1) {
+
+            client.sendStandardFormat(Reply.ERR_NEEDMOREPARAMS.format(client.getSafeNickname(), MODE, "<nick> [mode string]"));
+            return;
+        }
+
+        if (!SharedData.nicknamesEqual(client.getSafeNickname(), args[0])) {
+
+            //Don't allow to set other user's modes
+            client.sendStandardFormat(Reply.ERR_USERSDONTMATCH.format(client.getSafeNickname()));
+            return;
+        }
+
+        if (args.length == 1) {
+
+            client.sendStandardFormat(Reply.RPL_UMODEIS.format(client.getSafeNickname(), client.getSafeNickname(), client.flags()));
+            return;
+        }
+
+        if (args[1].startsWith("-")) {
+
+            if (args[1].length() < 2) {
+                return;
+            }
+
+            client.removeFlags(args[1].substring(1));
+            return;
+        }
+
+        if (args[1].startsWith("+")) {
+            if (args[1].length() < 2) {
+                return;
+            }
+
+            args[1] = args[1].substring(1);
+        }
+
+        client.addFlags(args[1]);
+    }
+    
+    private static void onStopCommand(Client client, String[] args) {
+
+        if (client.hasFlag('o')) {
+
+            String reason = "No reason given";
+            if (args.length > 0) {
+                reason = ArrayUtils.joinArray(args);
+            }
+
+            SharedData.connectionPool.notifyClients(String.format("Server shutting down (STOP command invoked by %s (%s) (Reason: %s))",
+                    client.getCommonName(), client.getMask(), reason));
+
+            Server.INSTANCE.close();
+        } else {
+
+            client.sendStandardFormat(Reply.ERR_NOPRIVILEGES.format(client.getSafeNickname()));
         }
     }
     

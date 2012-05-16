@@ -23,9 +23,6 @@ import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.CopyOnWriteArraySet;
-import java.util.logging.Level;
 import net.boreeas.frozenircd.config.ConfigData;
 import net.boreeas.frozenircd.config.ConfigKey;
 import net.boreeas.frozenircd.config.Reply;
@@ -47,7 +44,7 @@ public class Client extends Connection {
     private boolean userGiven = false;
     private boolean passGiven = false;
     
-    private Set<Character> flags = new HashSet<Character>();
+    private Set<Character> flags = new HashSet<>();
     
     private String username;
     private String realname;
@@ -57,7 +54,7 @@ public class Client extends Connection {
     
     public Client(Socket socket, boolean ssl) throws IOException {
         
-        SharedData.logger.log(Level.INFO, "Client from {0} attached", socket);
+        SharedData.logger.info("Client from {0} attached", socket);
         
         
         this.socket = socket;
@@ -71,14 +68,19 @@ public class Client extends Connection {
 
     public void send(String line) {
         
+        
         try {
             
-            SharedData.logger.log(Level.parse("0"), "[-> {0}] :{1}", new Object[]{socket.getInetAddress(), line});
-            writer.write(String.format(":%s\r\n", line));
+            SharedData.logger.trace("[-> {0}] {1}", new Object[]{socket.getInetAddress(), line});
+            writer.write(String.format("%s\r\n", line));
             writer.flush();
         } catch (IOException ioe) {
             
-            SharedData.logger.log(Level.SEVERE, String.format("Could not write to %s, closing connection", socket.getInetAddress()), ioe);
+            if (closed) {
+                return;
+            }
+            
+            SharedData.logger.error(String.format("Could not write to %s, closing connection", socket.getInetAddress()), ioe);            
             disconnect(ioe.getMessage());
         }
     }
@@ -89,17 +91,17 @@ public class Client extends Connection {
      */
     public void sendStandardFormat(String line) {
         
-        send(String.format("%s %s", ConfigData.getFirstConfigOption(ConfigKey.HOST), line));
+        send(String.format(":%s %s", ConfigData.getFirstConfigOption(ConfigKey.HOST), line));
     }
     
     public void sendNotice(String senderHostmask, String receiver, String message) {
         
-        send(String.format("%s NOTICE %s :%s", senderHostmask, receiver, message));
+        send(String.format(":%s NOTICE %s :%s", senderHostmask, receiver, message));
     }
     
     public void sendPrivateMessage(String senderHostmask, String receiver, String message) {
         
-        send(String.format("%s PRIVMSG %s :%s", senderHostmask, receiver, message));
+        send(String.format(":%s PRIVMSG %s :%s", senderHostmask, receiver, message));
     }
     
     public void kill(String reason) {
@@ -309,7 +311,7 @@ public class Client extends Connection {
     @Override
     public void onInput(String input) {
         
-        SharedData.logger.log(Level.ALL, "[{0} ->] {1}", new Object[]{this, input});
+        SharedData.logger.trace("[{0} ->] {1}", new Object[]{this, input});
         
         
         String[] fields = input.split(" ", 2);
@@ -337,7 +339,7 @@ public class Client extends Connection {
     @Override
     public void onDisconnect() {
         
-        SharedData.logger.log(Level.ALL, "Client {0} disconnected", this);
+        SharedData.logger.trace("Client {0} disconnected", this);
     }
 
     @Override

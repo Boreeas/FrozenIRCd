@@ -15,7 +15,6 @@
  */
 package net.boreeas.frozenircd;
 
-import java.util.logging.Level;
 import net.boreeas.frozenircd.config.ConfigData;
 import net.boreeas.frozenircd.config.ConfigKey;
 import net.boreeas.frozenircd.connection.Connection;
@@ -41,10 +40,7 @@ public class PingDaemon extends Thread {
 
         int timeSinceLastPingMillis = pingFreqMillis;
 
-        System.out.println(pingTimeoutMillis + " (" + (pingTimeoutMillis / 1000) + " s)");
         while (true) {
-
-            SharedData.logger.log(Level.INFO, "Sending ping checks");
             
             for (Connection connection : SharedData.connectionPool.getConnections()) {
 
@@ -73,14 +69,12 @@ public class PingDaemon extends Thread {
             
             // Wait for next
             try {
-                SharedData.logger.log(Level.SEVERE, "PingDaemon sleeping");
-                sleep(pingTimeoutMillis);
-                SharedData.logger.log(Level.SEVERE, "PingDaemon woke up");
                 
+                sleep(pingTimeoutMillis);
                 timeSinceLastPingMillis += pingTimeoutMillis;
             }
             catch (InterruptedException ex) {
-                SharedData.logger.log(Level.WARNING, "Unable to sleep in PING daemon", ex);
+                SharedData.logger.warn("Unable to sleep in PING daemon", ex);
             }
         }
     }

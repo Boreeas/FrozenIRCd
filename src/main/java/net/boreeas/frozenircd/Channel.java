@@ -27,7 +27,7 @@ import net.boreeas.frozenircd.connection.client.Client;
  */
 public class Channel {
     
-    private Set<Character> channelmodes = new HashSet<Character>();
-    private Map<Client, Set<Character>> accessList = new HashMap<Client, Set<Character>>();
-    private Set<Client> clients = new HashSet<Client>();
+    private Set<Character> channelmodes = new HashSet<>();
+    private Map<Client, Set<Character>> accessList = new HashMap<>();
+    private Set<Client> clients = new HashSet<>();
 }

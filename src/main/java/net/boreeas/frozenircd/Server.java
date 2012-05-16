@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.logging.Level;
 import net.boreeas.frozenircd.config.ConfigData;
 import net.boreeas.frozenircd.config.ConfigKey;
 
@@ -45,7 +44,7 @@ public enum Server {
      */
     private Server() {
         
-        connectionListeners = new HashSet<ConnectionListener>();
+        connectionListeners = new HashSet<>();
     }
     
     public void start() {
@@ -57,50 +56,56 @@ public enum Server {
     
     public void startListeners() {
         
-        SharedData.logger.log(Level.INFO, "Starting listeners:");
+        SharedData.logger.info("Starting listeners:");
         String host = ConfigData.getFirstConfigOption(ConfigKey.HOST);
         
         for (String port: ConfigData.getConfigOption(ConfigKey.PORTS)) {
             
             boolean useSSL = false;
+            
             if (port.startsWith("+")) {
+                
                 // +[port] indicates an SSL port
                 useSSL = true;
                 port = port.substring(1);
             }
             
             if (!port.matches("[0-9]+")) {
-                SharedData.logger.log(Level.SEVERE, "Invalid port entry: Not an integer: {0} (Skipping)", port);
+                
+                SharedData.logger.error(String.format("Invalid port entry: Not an integer: %s (Skipping)", port));
                 continue;
             }
             
             try {
-                SharedData.logger.log(Level.INFO, "Binding to {0}:{1} ({2})", new Object[]{host, port, (useSSL) ? "ssl" : "no ssl"});
+                
+                SharedData.logger.info(String.format("Binding to {0}:{1} ({2})", host, port, (useSSL) ? "ssl" : "no ssl"));
+                
                 ConnectionListener connListener = new ConnectionListener(host, Integer.parseInt(port), useSSL);
                 connListener.start();
+                
                 connectionListeners.add(connListener);
             } catch (IOException ex) {
-                SharedData.logger.log(Level.SEVERE, String.format("Unable to listen on port %s", port), ex);
+                SharedData.logger.error(String.format("Unable to listen on port %s", port), ex);
             }
         }
     }
 
     public void close() {
         
-        SharedData.logger.log(Level.INFO, "Initiating shutdown sequence");
+        SharedData.logger.info("Initiating shutdown sequence");
         
         for (ConnectionListener listener: connectionListeners) {
             
-            SharedData.logger.log(Level.INFO, "No longer accepting incoming connections");
+            SharedData.logger.info("No longer accepting incoming connections");
             
             listener.requestInterrupt();
         }
         
-        SharedData.logger.log(Level.INFO, "Disconnecting connected clients");
-        SharedData.logger.log(Level.INFO, "Delinking servers");
+        SharedData.logger.info("Disconnecting connected clients");
+        SharedData.logger.info("Delinking servers");
         SharedData.connectionPool.disconnectAll();
         
-        SharedData.logger.log(Level.INFO, "Spinning down");
+        SharedData.logger.info("Spinning down");
     }
     
     private void startPingDaemon() {
@@ -127,11 +132,11 @@ public enum Server {
             } catch (ArrayIndexOutOfBoundsException oobe) {
                 
                 // We did not get enough arguments to complete the connection
-                SharedData.logger.warning(String.format("Incorrect link entry format for entry %s: Accepted formats are <host>:<port>:<password> or <host>::<password>", Arrays.toString(data)));
+                SharedData.logger.warn(String.format("Incorrect link entry format for entry %s: Accepted formats are <host>:<port>:<password> or <host>::<password>", Arrays.toString(data)));
                 continue;
             } catch (IOException ioe) {
                 
-                SharedData.logger.log(Level.SEVERE, String.format("Failed to connect to establish link %s: IOException", Arrays.toString(data)), ioe);
+                SharedData.logger.error(String.format("Failed to connect to establish link %s: IOException", Arrays.toString(data)), ioe);
                 continue;
             }       
         }

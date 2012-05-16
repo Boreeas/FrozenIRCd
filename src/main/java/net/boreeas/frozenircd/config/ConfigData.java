@@ -24,7 +24,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Level;
 import net.boreeas.frozenircd.utils.HashUtils;
 
 /**
@@ -54,8 +53,7 @@ public class ConfigData {
     /**
      * Default settings for certain options
      */
-    private final static Map<String, String[]> defaultOptions 
-            = new HashMap<String, String[]>();
+    private final static Map<String, String[]> defaultOptions = new HashMap<>();
     
     /**
      * O-Lines (Oper hosts) parameter name
@@ -85,6 +83,7 @@ public class ConfigData {
                             "["                 //Grab from the following
                                 + "a-zA-Z"          //Alphabetical chars
                                 + "_"               //Underscore
+                                + "`"               //This thingy
                                 + "\\Q"             //Start escape sequence
                                     + "\\"              //Backslash
                                     + "[]"              //Square brakcets
@@ -92,13 +91,13 @@ public class ConfigData {
                                     + "^"               //Accent circonflexe
                                     + "|"               //Pipe
                                 + "\\E"             //End escape sequence
-                                + "`"               //This thingy
                             + "]"            
                 
                             // Rest of the letters
                             + "["               //Grab from the following
                                 + "a-zA-Z0-9"       //Alphanumerical chars
                                 + "_"               //Underscore
+                                + "`"               //This thingy
                                 + "\\Q"             //Start escape sequence
                                     + "-"               //Minus
                                     + "\\"              //Backslash
@@ -107,11 +106,10 @@ public class ConfigData {
                                     + "^"               //Accent circonflexe
                                     + "|"               //Pipe
                                 + "\\E"             //End escape sequence
-                                + "`"               //This thingy
                             + "]");            // End sequence
         putSingleDefaultOption(ConfigKey.USING_PASS, "false");
         putSingleDefaultOption(ConfigKey.PORTS, "6667");
-        putSingleDefaultOption(ConfigKey.LOGGING_LEVEL, "0");
+        putSingleDefaultOption(ConfigKey.LOGGING, "0");
         putSingleDefaultOption(ConfigKey.USER_PASS, "");
         putSingleDefaultOption(ConfigKey.PING_FREQUENCY, "600");
         putSingleDefaultOption(ConfigKey.PING_TIMEOUT, "180");
@@ -144,7 +142,7 @@ public class ConfigData {
             newConfig.load();
         } catch (IOException ex) {
             
-            SharedData.logger.log(Level.SEVERE, name + " could not be loaded.", ex);
+            SharedData.logger.error(name + " could not be loaded.", ex);
         }
         
         return newConfig;
@@ -171,7 +169,7 @@ public class ConfigData {
                     }
                     catch (IOException ex) {
                         
-                        SharedData.logger.log(Level.SEVERE, "Could not save Config", ex);
+                        SharedData.logger.error("Could not save Config", ex);
                     }
                 }
             });
@@ -196,7 +194,7 @@ public class ConfigData {
                 @Override
                 public void run() {
 
-                    SharedData.logger.log(Level.INFO, "Rewriting lines to disk");
+                    SharedData.logger.info("Rewriting lines to disk");
 
                     lines.set(O_LINES, olinesSet.toArray());
                     lines.set(U_LINES, ulinesSet.toArray());
@@ -207,7 +205,7 @@ public class ConfigData {
                         lines.save();
                     }
                     catch (IOException ex) {
-                        SharedData.logger.log(Level.SEVERE, "Unable to save lines file", ex);
+                        SharedData.logger.error("Unable to save lines file", ex);
                     }
                 }
             });
@@ -234,7 +232,7 @@ public class ConfigData {
                         opers.save();
                     }
                     catch (IOException ex) {
-                        SharedData.logger.log(Level.SEVERE, "Opers file could not be saved.");
+                        SharedData.logger.error("Opers file could not be saved.");
                     }
                 }
             });
@@ -260,7 +258,7 @@ public class ConfigData {
         String[] values = config.get(key);
         
         if (values == null) {
-            SharedData.logger.log(Level.WARNING, "No value for key \"{0}\" found in config - checking defaults", key);
+            SharedData.logger.warn("No value for key \"{0}\" found in config - checking defaults", key);
             values = defaultOptions.get(key);
         }
         
@@ -321,7 +319,7 @@ public class ConfigData {
         
         if (olinesSet == null) {
             
-            olinesSet = new HashSet<String>();
+            olinesSet = new HashSet<>();
             String[] olines = getLines(O_LINES);
             
             if (!(olines == null)) {
@@ -337,7 +335,7 @@ public class ConfigData {
         
         if (ulinesSet == null) {
             
-            ulinesSet = new HashSet<String[]>();
+            ulinesSet = new HashSet<>();
             String[] ulines = getLines(U_LINES);
             
             if (!(ulines == null)) {
@@ -346,12 +344,12 @@ public class ConfigData {
                     
                     String[] options = uline.split(":");
                     if (options.length < 2) {
-                        SharedData.logger.log(Level.SEVERE, "Incorrect link entry format for entry \"{0}\": Accepted formats are <host>:<port>:<password>, <host>::<password> or <host>:<password>", uline);
+                        SharedData.logger.error("Incorrect link entry format for entry \"{0}\": Accepted formats are <host>:<port>:<password>, <host>::<password> or <host>:<password>", uline);
                         continue;
                     } else if (options.length < 3) {
-                        SharedData.logger.log(Level.WARNING, "Found link entry format <host>:<pass> in entry {0}, extending to \"{1}:6667:{2}\"", new Object[]{uline, options[0], options[1]});
+                        SharedData.logger.warn("Found link entry format <host>:<pass> in entry {0}, extending to \"{1}:6667:{2}\"", new Object[]{uline, options[0], options[1]});
                     } else if (options[1].equals("")) {
-                        SharedData.logger.log(Level.WARNING, "Found link entry format <host>::<pass> in entry {0}, extending to \"{1}:6667:{2}\"", new Object[]{uline, options[0], options[2]});
+                        SharedData.logger.warn("Found link entry format <host>::<pass> in entry {0}, extending to \"{1}:6667:{2}\"", new Object[]{uline, options[0], options[2]});
                     }
                 }
             }

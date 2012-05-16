@@ -17,7 +17,6 @@ package net.boreeas.frozenircd.utils;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.logging.Level;
 
 /**
  *
@@ -36,7 +35,7 @@ public final class HashUtils {
         try {
             algorithm = MessageDigest.getInstance("SHA-256");
         } catch (NoSuchAlgorithmException nsae) {
-            SharedData.logger.log(Level.SEVERE, "Cannot find digest algorithm: SHA-256");
+            SharedData.logger.error("Cannot find digest algorithm: SHA-256");
             throw nsae;
         }
 

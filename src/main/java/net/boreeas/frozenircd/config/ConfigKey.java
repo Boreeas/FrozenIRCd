@@ -25,7 +25,7 @@ public enum ConfigKey {
     
     HOST                ("hostname"),
     DESCRIPTION         ("description"),
-    USING_PASS          ("using-pass"),
+    USING_PASS          ("using.pass"),
     PORTS               ("ports"),
     
     MIN_NICK_LENGTH     ("nick.length.min"),
@@ -43,7 +43,7 @@ public enum ConfigKey {
     SERVICE_PASS        ("password.service"),
     USER_PASS           ("password.user"),
     
-    LOGGING_LEVEL       ("logging.level");
+    LOGGING             ("logging.enabled");
     
     
     

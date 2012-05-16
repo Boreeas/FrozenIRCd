@@ -22,11 +22,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.CopyOnWriteArraySet;
-import java.util.logging.Level;
-import net.boreeas.frozenircd.Interruptable;
 import net.boreeas.frozenircd.config.ConfigData;
 import net.boreeas.frozenircd.config.ConfigKey;
 import net.boreeas.frozenircd.connection.Connection;
@@ -47,8 +42,7 @@ public class ServerLink extends Connection {
      */
     public ServerLink(String host, int port, String password) throws IOException {
         
-        SharedData.logger.log(Level.INFO, "Opening link to server at {0}:{1} with password {2}", new Object[]{host, port,
-                password});
+        SharedData.logger.info(String.format("Opening link to server at %s:%s with password %s", host, port, password));
         
         this.host = host;
         
@@ -57,7 +51,7 @@ public class ServerLink extends Connection {
         writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
         
         send(String.format("PASS %1s %2s%3s IRC|%3s", password, SharedData.PROTOCOL_VERSION, SharedData.BUILD_IDENTIFIER));
-        send(String.format("SERVER %s 1 %s : %s", ConfigData.getFirstConfigOption(ConfigKey.HOST), 
+        send(String.format("SERVER %s 1 %s :%s", ConfigData.getFirstConfigOption(ConfigKey.HOST), 
                                                           ConfigData.getFirstConfigOption(ConfigKey.TOKEN), 
                                                           ConfigData.getFirstConfigOption(ConfigKey.DESCRIPTION)));
     }
@@ -68,13 +62,14 @@ public class ServerLink extends Connection {
     public final void send(String line) {
         
         try {
-            SharedData.logger.log(Level.ALL, line);
+            
+            SharedData.logger.trace(line);
             writer.write(line + "\r\n");
             writer.flush();
         } catch (IOException ioe) {
             
             requestInterrupt();    // An ioe indicates a closed stream
-            SharedData.logger.log(Level.SEVERE, String.format("Unable to write output to %s, closing link", socket.getInetAddress().getHostName()), ioe);
+            SharedData.logger.error(String.format("Unable to write output to %s, closing link", socket.getInetAddress().getHostName()), ioe);
         }
     }
 
@@ -87,7 +82,7 @@ public class ServerLink extends Connection {
     @Override
     public void onDisconnect() {
         
-        SharedData.logger.log(Level.INFO, "Link to {0} closed.", this);
+        SharedData.logger.info(String.format("Link to %s closed.", this));
     }
 
     @Override

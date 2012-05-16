@@ -30,7 +30,7 @@ import net.boreeas.frozenircd.connection.client.Client;
  */
 public class ConnectionPool {
     
-    private Map<UUID, Connection> pool = new HashMap<UUID, Connection>();
+    private Map<UUID, Connection> pool = new HashMap<>();
     
     public ConnectionPool() {
         

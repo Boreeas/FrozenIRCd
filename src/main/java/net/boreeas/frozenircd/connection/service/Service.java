@@ -20,14 +20,11 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.UUID;
-import java.util.logging.Level;
-import net.boreeas.frozenircd.Interruptable;
 import net.boreeas.frozenircd.config.ConfigData;
 import net.boreeas.frozenircd.config.ConfigKey;
 import net.boreeas.frozenircd.config.Reply;
 import net.boreeas.frozenircd.utils.SharedData;
 import net.boreeas.frozenircd.connection.Connection;
-import net.boreeas.frozenircd.connection.client.ClientInputHandler;
 
 /**
  *
@@ -58,13 +55,13 @@ public class Service extends Connection {
         
         try {
             
-            SharedData.logger.log(Level.parse("0"), "[-> {0}] {1}", new Object[]{socket.getInetAddress(), line});
+            SharedData.logger.trace("[-> {0}] {1}", new Object[]{socket.getInetAddress(), line});
             
             writer.write(String.format(":%s %s\r\n", ConfigData.getFirstConfigOption(ConfigKey.HOST), line));
             writer.flush();
         } catch (IOException ioe) {
             
-            SharedData.logger.log(Level.SEVERE, String.format("Could not write to %s, closing connection", socket.getInetAddress()), ioe);
+            SharedData.logger.error(String.format("Could not write to %s, closing connection", socket.getInetAddress()), ioe);
             disconnect(ioe.getMessage());
         }
     }
@@ -78,7 +75,7 @@ public class Service extends Connection {
     @Override
     public void onDisconnect() {
         
-        SharedData.logger.log(Level.INFO, "Service {0} at {1} disconnected.", new Object[]{nick, this});
+        SharedData.logger.info("Service {0} at {1} disconnected.", new Object[]{nick, this});
     }
 
     @Override
