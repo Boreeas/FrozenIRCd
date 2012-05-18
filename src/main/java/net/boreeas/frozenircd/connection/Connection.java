@@ -22,7 +22,8 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.util.UUID;
 import net.boreeas.frozenircd.Interruptable;
-import net.boreeas.frozenircd.config.Reply;
+import net.boreeas.frozenircd.command.Command;
+import net.boreeas.frozenircd.command.Reply;
 import net.boreeas.frozenircd.utils.SharedData;
 
 /**
@@ -123,7 +124,7 @@ public abstract class Connection extends Thread implements Interruptable {
      */
     public void disconnect(String message) {
         
-        SharedData.logger.info(String.format("Closing connection to {0} ({1})", this, message));
+        SharedData.logger.info(String.format("Closing connection to %s (%s)", this, message));
         
         closed = true;
         requestInterrupt();
@@ -183,7 +184,7 @@ public abstract class Connection extends Thread implements Interruptable {
     
     public void sendPingRequest(String request) {
         
-        send(Reply.OTHER_PING.format(request));
+        send(Command.PING.format(request));
         this.lastPingText = request;
     }
     

@@ -20,11 +20,10 @@ import net.boreeas.frozenircd.config.IncompleteConfigurationException;
 import java.security.NoSuchAlgorithmException;
 import net.boreeas.frozenircd.utils.HashUtils;
 import net.boreeas.frozenircd.utils.ArrayUtils;
-import net.boreeas.frozenircd.config.Reply;
 import net.boreeas.frozenircd.connection.Connection;
 import net.boreeas.frozenircd.utils.SharedData;
 import net.boreeas.frozenircd.connection.client.Client;
-import static net.boreeas.frozenircd.config.Reply.*;
+import static net.boreeas.frozenircd.command.Reply.*;
 import static net.boreeas.frozenircd.config.ConfigData.*;
 import static net.boreeas.frozenircd.config.ConfigKey.*;
 
@@ -106,7 +105,7 @@ public class ClientCommandParser {
             return;
         }
 
-        client.sendStandardFormat(OTHER_PONG.format(getFirstConfigOption(HOST), args[0]));
+        client.sendStandardFormat(PONG.format(getFirstConfigOption(HOST), args[0]));
     }
     
     private static void onPongCommand(Client client, String[] args) {
@@ -150,6 +149,10 @@ public class ClientCommandParser {
             
         } else {
 
+            if (!isNameLengthOK(args[0])) {
+                args[0] = args[0].substring(0, SharedData.maxNickLength);
+            }
+            
             if (!client.receivedIdentResponse()) {
                 client.setUsername(args[0]);
             }
@@ -185,6 +188,10 @@ public class ClientCommandParser {
             client.sendStandardFormat(Reply.ERR_NICKNAMEINUSE.format(nickname, args[0]));
             
         } else {
+            
+            if (!isNameLengthOK(args[0])) {
+                args[0] = args[0].substring(0, SharedData.maxNickLength);
+            }
             
             client.setNickname(args[0]);
         }
@@ -330,7 +337,7 @@ public class ClientCommandParser {
             }
 
             SharedData.connectionPool.notifyClients(String.format("Server shutting down (STOP command invoked by %s (%s) (Reason: %s))",
-                    client.getCommonName(), client.getMask(), reason));
+                    client.getCommonName(), client.getHostmask(), reason));
 
             Server.INSTANCE.close();
         } else {
@@ -360,7 +367,6 @@ public class ClientCommandParser {
         return false;
     }
     
-    
     private static boolean isNameInUse(Client client, String name) {
         
         for (Connection conn : SharedData.connectionPool.getConnections()) {
@@ -373,9 +379,14 @@ public class ClientCommandParser {
         return false;
     }
     
-    
     private static boolean isNameLegal(String name) {
         
         return SharedData.nickPattern.matcher(name).matches();
+    }
+    
+    private static boolean isNameLengthOK(String name) {
+        
+        return name.length() >= SharedData.minNickLength 
+            && name.length() <= SharedData.maxNickLength;
     }
 }

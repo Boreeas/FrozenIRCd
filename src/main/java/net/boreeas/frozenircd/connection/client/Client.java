@@ -25,7 +25,7 @@ import java.util.HashSet;
 import java.util.Set;
 import net.boreeas.frozenircd.config.ConfigData;
 import net.boreeas.frozenircd.config.ConfigKey;
-import net.boreeas.frozenircd.config.Reply;
+import net.boreeas.frozenircd.command.Reply;
 import net.boreeas.frozenircd.utils.SharedData;
 import net.boreeas.frozenircd.connection.Connection;
 import net.boreeas.frozenircd.connection.service.Service;
@@ -54,7 +54,7 @@ public class Client extends Connection {
     
     public Client(Socket socket, boolean ssl) throws IOException {
         
-        SharedData.logger.info("Client from {0} attached", socket);
+        SharedData.logger.info(String.format("Client from %s attached", socket));
         
         
         this.socket = socket;
@@ -71,7 +71,7 @@ public class Client extends Connection {
         
         try {
             
-            SharedData.logger.trace("[-> {0}] {1}", new Object[]{socket.getInetAddress(), line});
+            SharedData.logger.trace(String.format("[-> %s] %s", socket.getInetAddress(), line));
             writer.write(String.format("%s\r\n", line));
             writer.flush();
         } catch (IOException ioe) {
@@ -273,7 +273,7 @@ public class Client extends Connection {
                 && ((ConfigData.getFirstConfigOption(ConfigKey.USING_PASS).equalsIgnoreCase("true")) ? passGiven : true);
     }
     
-    public String getMask() {
+    public String getHostmask() {
         return String.format("%s!%s@%s", nickname, username, hostname);
     }
 
@@ -311,7 +311,7 @@ public class Client extends Connection {
     @Override
     public void onInput(String input) {
         
-        SharedData.logger.trace("[{0} ->] {1}", new Object[]{this, input});
+        SharedData.logger.trace(String.format("[%s ->] %s", this, input));
         
         
         String[] fields = input.split(" ", 2);
@@ -339,7 +339,7 @@ public class Client extends Connection {
     @Override
     public void onDisconnect() {
         
-        SharedData.logger.trace("Client {0} disconnected", this);
+        SharedData.logger.trace(String.format("Client %s disconnected", this));
     }
 
     @Override
@@ -349,7 +349,7 @@ public class Client extends Connection {
     
     public void onModeChange() {
         
-        sendStandardFormat(Reply.RPL_UMODEIS.format(getSafeNickname(), getSafeNickname(), flags()));
+        sendStandardFormat(Reply.RPL_UMODEIS.format(getSafeNickname(), flags()));
     }
     
     public Service toService(final ServiceCommandHandler handler, String newNick, String visibility, String type) {

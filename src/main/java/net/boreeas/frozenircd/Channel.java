@@ -19,7 +19,11 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import net.boreeas.frozenircd.command.Command;
+import net.boreeas.frozenircd.command.Reply;
+import net.boreeas.frozenircd.connection.BroadcastFilter;
 import net.boreeas.frozenircd.connection.client.Client;
+import net.boreeas.frozenircd.utils.SharedData;
 
 /**
  *
@@ -27,7 +31,96 @@ import net.boreeas.frozenircd.connection.client.Client;
  */
 public class Channel {
     
-    private Set<Character> channelmodes = new HashSet<>();
-    private Map<Client, Set<Character>> accessList = new HashMap<>();
-    private Set<Client> clients = new HashSet<>();
+    /**
+     * The name for the channel.
+     */
+    private final String name;
+    
+    /**
+     * The current topic for the channel.
+     */
+    private String topic;
+    
+    /**
+     * The time the topic was set
+     */
+    private long topicSetTime = System.currentTimeMillis();
+    
+    /**
+     * The set channel modes.
+     */
+    private final Set<Character> channelmodes = new HashSet<>();
+    
+    /**
+     * The access list for the channel.
+     */
+    private final Map<String, Set<Character>> accessList = new HashMap<>();
+    
+    /**
+     * The clients that have currently joined the room.
+     */
+    private final Set<Client> clients = new HashSet<>();
+    
+    /**
+     * Creates a new channel with given name.
+     * @param name The name of the channel
+     */
+    public Channel(final String name) {
+        
+        this.name = name;
+    }
+    
+    /**
+     * Sends a reply to all clients, formatted with the given args.
+     * @param reply The reply to send
+     * @param args The args for the reply
+     */
+    public void sendToAll(final Reply reply, final Object... args) {
+        
+        final String formattedReply = reply.format(args);
+        
+        for (final Client client: clients) {
+            
+            client.sendStandardFormat(formattedReply);
+        }
+    }
+    
+    /**
+     * Sends a message to all clients, appearing to originate from the given client
+     * @param client The client who sent the message
+     * @param string The message to send
+     */
+    public void sendFromClient(final Client client, final String string) {
+        
+        sendFromClient(client, name, SharedData.emptyBroadcastFilter);
+    }
+    
+    /**
+     * Send a message to all clients passing through the filter, appearing to originate from the given client
+     * @param client The client who sent the message
+     * @param message The message to send
+     * @param filter The filter to determine which clients receive the message
+     */
+    public void sendFromClient(final Client client, final String message, final BroadcastFilter filter) {
+        
+        final String actualMessage = ":" + client.getHostmask() + " " + message;
+        
+        for (final Client other: clients) {
+            
+            if (filter.sendToConnection(other)) {
+                
+                other.send(actualMessage);
+            }
+        }
+    }
+    
+    public void joinChannel(final Client client) {
+        
+        clients.add(client);
+        sendFromClient(client, Command.JOIN.format(this.name));
+        
+        if (topic != null) {
+            client.sendStandardFormat(Reply.RPL_TOPIC.format(client.getSafeNickname(), this.name, this.topic));
+        }
+    }
 }

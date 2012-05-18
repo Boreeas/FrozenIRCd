@@ -68,10 +68,11 @@ public class ConfigData {
     private static Set<String[]> ulinesSet;
     
     static {
-        defaultOptions.put(ConfigKey.BLACKLISTED_NICKS.getKey(), 
-                            new String[0]);
         defaultOptions.put(ConfigKey.DESCRIPTION.getKey(), 
                             new String[]{"An IRC server"});
+        
+        defaultOptions.put(ConfigKey.BLACKLISTED_NICKS.getKey(), 
+                            new String[] {"admin", "oper", "root"});
         defaultOptions.put(ConfigKey.MAX_NICK_LENGTH.getKey(), 
                             new String[]{"8"});
         defaultOptions.put(ConfigKey.MIN_NICK_LENGTH.getKey(), 
@@ -106,11 +107,13 @@ public class ConfigData {
                                     + "^"               //Accent circonflexe
                                     + "|"               //Pipe
                                 + "\\E"             //End escape sequence
-                            + "]");            // End sequence
+                            + "]+");            // End sequence - grab as many following characters as possible
+        
         putSingleDefaultOption(ConfigKey.USING_PASS, "false");
+        putSingleDefaultOption(ConfigKey.USER_PASS, "[empty]");
+        
         putSingleDefaultOption(ConfigKey.PORTS, "6667");
-        putSingleDefaultOption(ConfigKey.LOGGING, "0");
-        putSingleDefaultOption(ConfigKey.USER_PASS, "");
+        
         putSingleDefaultOption(ConfigKey.PING_FREQUENCY, "600");
         putSingleDefaultOption(ConfigKey.PING_TIMEOUT, "180");
         putSingleDefaultOption(ConfigKey.CONNECT_TIMEOUT, "60");
@@ -258,7 +261,7 @@ public class ConfigData {
         String[] values = config.get(key);
         
         if (values == null) {
-            SharedData.logger.warn("No value for key \"{0}\" found in config - checking defaults", key);
+            SharedData.logger.warn(String.format("No value for key \"%s\" found in config - checking defaults", key));
             values = defaultOptions.get(key);
         }
         
@@ -276,13 +279,7 @@ public class ConfigData {
      */
     public static String[] getConfigOption(ConfigKey key) {
         
-        String[] values = getConfigOption(key.getKey());
-        if (values == null) {
-            String error = String.format("Missing key %s (config option: %s)", key, key.getKey());
-            throw new IncompleteConfigurationException(error);
-        }
-        
-        return values;
+        return getConfigOption(key.getKey());
     }
     
     public static String getFirstConfigOption(String key) {
@@ -344,12 +341,14 @@ public class ConfigData {
                     
                     String[] options = uline.split(":");
                     if (options.length < 2) {
-                        SharedData.logger.error("Incorrect link entry format for entry \"{0}\": Accepted formats are <host>:<port>:<password>, <host>::<password> or <host>:<password>", uline);
+                        SharedData.logger.error(String.format("Incorrect link entry format for entry \"%s\": Accepted formats are <host>:<port>:<password>, <host>::<password> or <host>:<password>", uline));
                         continue;
                     } else if (options.length < 3) {
-                        SharedData.logger.warn("Found link entry format <host>:<pass> in entry {0}, extending to \"{1}:6667:{2}\"", new Object[]{uline, options[0], options[1]});
+                        SharedData.logger.warn(String.format("Found link entry format <host>:<pass> in entry %s, expanding to \"%s:6667:%s\"", 
+                                                             uline, options[0], options[1]));
                     } else if (options[1].equals("")) {
-                        SharedData.logger.warn("Found link entry format <host>::<pass> in entry {0}, extending to \"{1}:6667:{2}\"", new Object[]{uline, options[0], options[2]});
+                        SharedData.logger.warn(String.format("Found link entry format <host>::<pass> in entry %s, expanding to \"%s:6667:%s\"", 
+                                                             uline, options[0], options[2]));
                     }
                 }
             }

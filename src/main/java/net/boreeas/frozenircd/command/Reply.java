@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.boreeas.frozenircd.config;
+package net.boreeas.frozenircd.command;
 
 /**
  *
@@ -24,9 +24,21 @@ public enum Reply {
     //<editor-fold defaultstate="collapsed" desc="RPL - Standard replies">
     /**
      * Sent to indicate a successful umode change.<br />
-     * Parameters: nick, nick, flag string
+     * Parameters: nick, flag string
      */
-    RPL_UMODEIS             ("221 %s :Usermode for %s is +%s", 3),
+    RPL_UMODEIS             ("221 %s :+%s", 2),
+    
+    /**
+     * Sent on a TOPIC if no topic has been set.<br />
+     * Parameters: nick, channel
+     */
+    RPL_NOTOPIC             ("331 %s %s: No topic has been set", 2),
+    
+    /**
+     * Sent on a channel join or on a TOPIC.<br />
+     * Parameters: nick, channel, topic
+     */
+    RPL_TOPIC               ("332 %s %s :%s", 3),
     
     /**
      * Sent to indicate a successfully executed OPER command.<br />
@@ -83,7 +95,7 @@ public enum Reply {
      * Sent when an OPER-command is used by a non-OPER.<br />
      * Parameters: nick
      */
-    ERR_NOPRIVILEGES             ("481 %s :Oper status is needed", 1),
+    ERR_NOPRIVILEGES        ("481 %s :Oper status is needed", 1),
     
     /**
      * Sent when a client whose host does not match any o-line attempts to use the OPER command.<br />
@@ -101,22 +113,10 @@ public enum Reply {
      * Sent when a client attempts to set umodes for a client other than themselves.<br />
      * Parameters: nick
      */
-    ERR_USERSDONTMATCH      ("502 %s :Can't set mode on other user", 1),
+    ERR_USERSDONTMATCH      ("502 %s :Can't set mode on other user", 1);
     //</editor-fold>
     
-    //<editor-fold defaultstate="collapsed" desc="OTHER - Not really numerics, but often used anyways">
-    /**
-     * Sent as a reply to a PING request.<br />
-     * Parameters: Server hostname, ping argument
-     */
-    OTHER_PONG              ("PONG %s :%s", 2),
     
-    /**
-     * Sent as alive check.<br />
-     * Parameters: ping argument
-     */
-    OTHER_PING              ("PING :%s", 1);
-    //</editor-fold>
     
     
     private String message;

@@ -22,7 +22,7 @@ import java.net.Socket;
 import java.util.UUID;
 import net.boreeas.frozenircd.config.ConfigData;
 import net.boreeas.frozenircd.config.ConfigKey;
-import net.boreeas.frozenircd.config.Reply;
+import net.boreeas.frozenircd.command.Reply;
 import net.boreeas.frozenircd.utils.SharedData;
 import net.boreeas.frozenircd.connection.Connection;
 

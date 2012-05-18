@@ -78,7 +78,7 @@ public enum Server {
             
             try {
                 
-                SharedData.logger.info(String.format("Binding to {0}:{1} ({2})", host, port, (useSSL) ? "ssl" : "no ssl"));
+                SharedData.logger.info(String.format("Binding to %s:%s (%s)", host, port, (useSSL) ? "ssl" : "no ssl"));
                 
                 ConnectionListener connListener = new ConnectionListener(host, Integer.parseInt(port), useSSL);
                 connListener.start();
@@ -129,6 +129,7 @@ public enum Server {
 
                 ServerLink newLink = new ServerLink(host, port, password);
                 SharedData.connectionPool.addConnection(newLink.getUUID(), newLink);
+                SharedData.linkPool.addConnection(newLink.getUUID(), newLink);
             } catch (ArrayIndexOutOfBoundsException oobe) {
                 
                 // We did not get enough arguments to complete the connection

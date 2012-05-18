@@ -25,6 +25,8 @@ import java.util.logging.Level;
 import java.util.regex.Pattern;
 import net.boreeas.frozenircd.command.ClientCommandParser;
 import net.boreeas.frozenircd.config.ConfigKey;
+import net.boreeas.frozenircd.connection.BroadcastFilter;
+import net.boreeas.frozenircd.connection.Connection;
 import net.boreeas.frozenircd.connection.ConnectionPool;
 import net.boreeas.frozenircd.connection.client.Client;
 import net.boreeas.frozenircd.connection.server.ServerInputHandler;
@@ -96,17 +98,23 @@ public class SharedData {
                     + "\tCommand: %s\n"
                     + "\tWith args: %s\n"
                     + "\tIssued by:%s (%s)\n"
-                    + "Caused by:", command, Arrays.toString(args), client.getMask(), client), ex);
+                    + "Caused by:", command, Arrays.toString(args), client.getHostmask(), client), ex);
         }
     }
     /**
      * The pool of all connections
      */
     public static final ConnectionPool connectionPool = new ConnectionPool();
+    
+    /**
+     * An additional pool, containing only server links
+     */
+    public static final ConnectionPool linkPool = new ConnectionPool();
+    
     /**
      * A set of all known umodes and their description.
      */
-    public static final Map<Character, String> umodes = Collections.unmodifiableMap(generateUmodeMap());
+    public static final Map<Character, String> umodes = Collections.unmodifiableMap(generateUmodeDescriptionMap());
     /**
      * A set of all umodes that can be set by a user
      */
@@ -119,12 +127,34 @@ public class SharedData {
     /**
      * The pattern that nicknames must adhere to
      */
-    public static final Pattern nickPattern = Pattern.compile(
-            String.format("%s{%s,%s}",
-                          getConfigOption(NICK_PATTERN)[0],
-                          getConfigOption(MIN_NICK_LENGTH)[0],
-                          getConfigOption(MAX_NICK_LENGTH)[0]));
+    public static final Pattern nickPattern = Pattern.compile(getConfigOption(NICK_PATTERN)[0]);
+    
+    /**
+     * The minimum length of nicknames
+     */
+    public static final int minNickLength = Integer.parseInt(getFirstConfigOption(MIN_NICK_LENGTH));
+    
+    /**
+     * The maximum length of nicknames
+     */
+    public static final int maxNickLength = Integer.parseInt(getFirstConfigOption(MAX_NICK_LENGTH));
+    
+    /**
+     * This filter returns true for all connections
+     */
+    public static final BroadcastFilter emptyBroadcastFilter = new BroadcastFilter() {
 
+        @Override
+        public boolean sendToConnection(Connection connection) {
+            return true;
+        }
+    };
+
+    /**
+     * The motd sent to a connected client after the registration has been sent
+     */
+    public static final String motd = readMOTD();
+    
     /**
      * Returns the lowercase version of <code>string</code> with the
      * @param string
@@ -191,20 +221,25 @@ public class SharedData {
 
     private static Set<Character> generateSettableUmodeSet() {
 
-        Set<Character> set = new HashSet<Character>();
+        Set<Character> set = new HashSet<>();
 
         set.add('i');
 
         return set;
     }
 
-    private static Map<Character, String> generateUmodeMap() {
+    private static Map<Character, String> generateUmodeDescriptionMap() {
 
-        Map<Character, String> map = new HashMap<Character, String>();
+        Map<Character, String> map = new HashMap<>();
 
         map.put('o', "Designates a user as IRC Operator. This mode can only be set by use of the OPER command");
         map.put('i', "Designates a client as invisible, which makes you harder to find.");
 
         return map;
+    }
+    
+    private static String readMOTD() {
+        
+        
     }
 }

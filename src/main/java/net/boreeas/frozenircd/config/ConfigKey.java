@@ -41,10 +41,7 @@ public enum ConfigKey {
     
     LINK_PASS           ("password.server"),
     SERVICE_PASS        ("password.service"),
-    USER_PASS           ("password.user"),
-    
-    LOGGING             ("logging.enabled");
-    
+    USER_PASS           ("password.user");
     
     
     private String key;
