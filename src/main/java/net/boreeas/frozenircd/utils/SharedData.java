@@ -15,16 +15,19 @@
  */
 package net.boreeas.frozenircd.utils;
 
+import java.io.IOException;
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
+import java.io.File;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Level;
 import java.util.regex.Pattern;
 import net.boreeas.frozenircd.command.ClientCommandParser;
-import net.boreeas.frozenircd.config.ConfigKey;
 import net.boreeas.frozenircd.connection.BroadcastFilter;
 import net.boreeas.frozenircd.connection.Connection;
 import net.boreeas.frozenircd.connection.ConnectionPool;
@@ -238,8 +241,27 @@ public class SharedData {
         return map;
     }
     
+    /**
+     * Returns the content of the MOTD file, or <code>null</code> if no MOTD file is present
+     * @return The content of the MOTD file
+     */
     private static String readMOTD() {
         
+        File motdFile = new File("./configs/motd");
         
+        if (!motdFile.exists()) {
+            
+            logger.warn("No MOTD file found.");
+            return null;
+        }
+        
+        try {
+            
+            return StreamUtils.readFully(new BufferedReader(new InputStreamReader(new FileInputStream(motdFile))));
+        } catch (IOException ex) {
+            
+            logger.error("Error while reading from MOTD file", ex);
+            return null;
+        }
     }
 }

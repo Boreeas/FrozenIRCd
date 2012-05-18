@@ -160,6 +160,12 @@ public class ClientCommandParser {
             client.setRealname(ArrayUtils.joinArray(args, 3));
             client.addFlag('i');
         }
+        
+        
+        if (client.registrationCompleted()) {
+            
+            client.onRegistrationComplete();
+        }
     }
     
     private static void onNickCommand(Client client, String[] args) {
@@ -194,6 +200,12 @@ public class ClientCommandParser {
             }
             
             client.setNickname(args[0]);
+        }
+        
+        
+        if (client.registrationCompleted()) {
+            
+            client.onRegistrationComplete();
         }
     }
     

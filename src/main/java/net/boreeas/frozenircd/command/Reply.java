@@ -23,6 +23,12 @@ public enum Reply {
     
     //<editor-fold defaultstate="collapsed" desc="RPL - Standard replies">
     /**
+     * Sent when a client finishes the registration.<br />
+     * Parameters: nick
+     */
+    RPL_WELCOME             ("001 %s :Welcome to the FrozenIRCd Test Network", 1),
+    
+    /**
      * Sent to indicate a successful umode change.<br />
      * Parameters: nick, flag string
      */
@@ -39,6 +45,12 @@ public enum Reply {
      * Parameters: nick, channel, topic
      */
     RPL_TOPIC               ("332 %s %s :%s", 3),
+    
+    /**
+     * Sent when a completes registration containing the MOTD of the server.<br />
+     * Parameters: nick, (part of the) MOTD
+     */
+    RPL_MOTD                ("372 %s :- %s", 2),
     
     /**
      * Sent to indicate a successfully executed OPER command.<br />

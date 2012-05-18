@@ -342,14 +342,27 @@ public class Client extends Connection {
         SharedData.logger.trace(String.format("Client %s disconnected", this));
     }
 
-    @Override
-    public String getCommonName() {
-        return getSafeNickname();
-    }
-    
     public void onModeChange() {
         
         sendStandardFormat(Reply.RPL_UMODEIS.format(getSafeNickname(), flags()));
+    }
+    
+    public void onRegistrationComplete() {
+        
+        sendStandardFormat(Reply.RPL_WELCOME.format(getSafeNickname()));
+        
+        if (SharedData.motd != null) {
+            
+            for (String part: SharedData.motd.split("\n")) {
+                
+                sendStandardFormat(Reply.RPL_MOTD.format(nickname, part));
+            }
+        }
+    }
+    
+    @Override
+    public String getCommonName() {
+        return getSafeNickname();
     }
     
     public Service toService(final ServiceCommandHandler handler, String newNick, String visibility, String type) {
