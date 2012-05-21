@@ -19,18 +19,18 @@ package net.boreeas.frozenircd.utils;
  *
  * @author Boreeas
  */
-public final class ArrayUtils {
+public final class StringUtils {
     
     // Utility class private constuctor
-    private ArrayUtils(){}
+    private StringUtils(){}
     
     /**
-     * Appends a string to a string builder, prepending an empty space if the
+     * Appends an object to a string builder, prepending an empty space if the
      * buffer already contains text.
      * @param builder The builder used for storing the text
-     * @param toAdd The text to add to the builder
+     * @param toAdd The object to add to the builder
      */
-    public static void appendToBuffer(StringBuilder builder, String toAdd) {
+    public static void appendToBuffer(StringBuilder builder, Object toAdd) {
         
         if (builder.length() > 0) {
             builder.append(" ");
@@ -39,30 +39,65 @@ public final class ArrayUtils {
         builder.append(toAdd);
     }
     
+    public static void appendToBuffer(StringBuilder builder, Object toAdd, String separator) {
+        
+        if (builder.length() > 0) {
+            builder.append(separator);
+        }
+        
+        builder.append(toAdd);
+    }
+    
     /**
-     * Concats an array of strings into a single string, using a whitespace
+     * Concats an array of objects into a single string, using a whitespace
      * character as separator.
      * @param array The array that should be joined
      * @return The string that has been created
      */
-    public static String joinArray(String[] array) {
+    public static String joinArray(Object[] array) {
         
-        return joinArray(array, 0);
+        return joinArray(array, 0, " ");
+    }
+    
+    public static String joinArray(Object[] array, String separator) {
+        
+        return joinArray(array, 0, separator);
     }
     
     /**
-     * Concats an array of strings into a single string, starting with the
-     * string at the specified index.
+     * Concats an array of objects into a single string, starting with the
+     * object at the specified index.
      * @param array The array that should be joined
      * @param firstIndex The index at which to start
      * @return The string that has been created.
      */
-    public static String joinArray(String[] array, int firstIndex) {
+    public static String joinArray(Object[] array, int firstIndex) {
+        
+        return joinArray(array, firstIndex, " ");
+    }
+    
+    public static String joinArray(Object[] array, int firstIndex, String separator) {
         
         StringBuilder builder = new StringBuilder();
         
         for (int i = firstIndex; i < array.length; i++) {
-            appendToBuffer(builder, array[i]);
+            appendToBuffer(builder, array[i], separator);
+        }
+        
+        return builder.toString();
+    }
+    
+    public static String joinIterable(Iterable iterable) {
+        
+        return joinIterable(iterable, " ");
+    }
+    
+    public static String joinIterable(Iterable iterable, String separator) {
+        
+        StringBuilder builder = new StringBuilder();
+        
+        for (Object part: iterable) {
+            appendToBuffer(builder, part, separator);
         }
         
         return builder.toString();

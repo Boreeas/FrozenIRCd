@@ -15,6 +15,11 @@
  */
 package net.boreeas.frozenircd.command;
 
+import java.util.Date;
+import net.boreeas.frozenircd.config.ConfigData;
+import net.boreeas.frozenircd.config.ConfigKey;
+import net.boreeas.frozenircd.utils.SharedData;
+
 /**
  *
  * @author Boreeas
@@ -24,9 +29,37 @@ public enum Reply {
     //<editor-fold defaultstate="collapsed" desc="RPL - Standard replies">
     /**
      * Sent when a client finishes the registration.<br />
+     * Parameters: nick, hostmask
+     */
+    RPL_WELCOME             ("001 %s :Welcome to the FrozenIRCd Test Network, %s", 2),
+    
+    /**
+     * Sent when a client finishes registration to inform them about the server they connect to.<br />
+     * Parameters: nick, server host
+     */
+    RPL_YOURHOST            ("002 %s :Your host is " + ConfigData.getFirstConfigOption(ConfigKey.HOST) + 
+                                     ", running FrozenIRCd " + SharedData.BUILD_IDENTIFIER, 1),
+    
+    /**
+     * Sent when a client finishes registration to inform them about the date the server was created.<br />
      * Parameters: nick
      */
-    RPL_WELCOME             ("001 %s :Welcome to the FrozenIRCd Test Network", 1),
+    RPL_CREATED             ("003 %s :This server is running since " + new Date(), 1),
+    
+    /**
+     * Sent when a client finished registration to give them further information about the server.<br />
+     * Parameters: nick
+     */
+    RPL_MYINFO              ("004 %s " + ConfigData.getFirstConfigOption(ConfigKey.HOST) + 
+                                   " " + SharedData.BUILD_IDENTIFIER + 
+                                   " " + SharedData.buildUModeString() +
+                                   " " + SharedData.buildCModeString(), 1),
+    
+    /**
+     * Sent when a client finished registration to give them further information about the server.<br />
+     * Parameters: nick
+     */
+    RPL_ISUPPORT            ("005 %s", 1),
     
     /**
      * Sent to indicate a successful umode change.<br />
@@ -47,10 +80,28 @@ public enum Reply {
     RPL_TOPIC               ("332 %s %s :%s", 3),
     
     /**
+     * Sent on channel join or on a NAMES, containing the nicks of the people in the given channel.<br />
+     * Parameters: nick, symbol, channel, space separated list of nicks
+     */
+    RPL_NAMREPLY            ("353 %s %s %s :%s", 4),
+    
+    /**
      * Sent when a completes registration containing the MOTD of the server.<br />
      * Parameters: nick, (part of the) MOTD
      */
     RPL_MOTD                ("372 %s :- %s", 2),
+    
+    /**
+     * Signifies the beginning of the MOTD.<br />
+     * Parameters: nick
+     */
+    RPL_MOTDSTART           ("375 %s :- " + ConfigData.getFirstConfigOption(ConfigKey.HOST) + " Message of the Day -", 1),  
+    
+    /**
+     * Signifies the end of the MOTD.<br />
+     * Parameters: nick
+     */
+    RPL_ENDOFMOTD           ("376 %s :" + ConfigData.getFirstConfigOption(ConfigKey.HOST) + " End of MOTD", 1),
     
     /**
      * Sent to indicate a successfully executed OPER command.<br />
@@ -83,6 +134,11 @@ public enum Reply {
      * Parameters: nick, target nick
      */
     ERR_NICKNAMEINUSE       ("433 %s :Nickname already in use: %s", 2),
+    
+    /**
+     * Sent whenever a client attempts to use a command on a channel they are not a member of
+     */
+    ERR_NOTONCHANNEL        ("442 %s %s :Need to be in channel", 2),
     
     /**
      * Sent when a command expects more parameters than were given by the client.<br />

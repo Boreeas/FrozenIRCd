@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import net.boreeas.frozenircd.utils.GenericSoftReference;
 import net.boreeas.frozenircd.utils.HashUtils;
 
 /**
@@ -41,13 +42,13 @@ public class ConfigData {
     /**
      * The "lines" configuration file
      */
-    private static Config lines;
+    private static GenericSoftReference<Config> linesRef = new GenericSoftReference<>(null);
     public static final String LINES = "lines";
     
     /**
      * Oper passwords
      */
-    private static Config opers;
+    private static GenericSoftReference<Config> opersRef = new GenericSoftReference<>(null);
     public static final String OPERS = "opers";
     
     /**
@@ -185,9 +186,9 @@ public class ConfigData {
      */
     private static synchronized void loadLinesFile() {
         
-        if (lines == null) {
+        if (linesRef.get() == null) {
             
-            lines = loadFile(LINES);
+            linesRef = new GenericSoftReference<>(loadFile(LINES));
             
             
             // Lines will be kept in a seperate set for ease of access, therefore we
@@ -199,13 +200,13 @@ public class ConfigData {
 
                     SharedData.logger.info("Rewriting lines to disk");
 
-                    lines.set(O_LINES, olinesSet.toArray());
-                    lines.set(U_LINES, ulinesSet.toArray());
+                    linesRef.get().set(O_LINES, olinesSet.toArray());
+                    linesRef.get().set(U_LINES, ulinesSet.toArray());
                     // TODO Add all the lines
 
 
                     try {
-                        lines.save();
+                        linesRef.get().save();
                     }
                     catch (IOException ex) {
                         SharedData.logger.error("Unable to save lines file", ex);
@@ -221,9 +222,9 @@ public class ConfigData {
      */
     private static synchronized void loadOperPassFile() {
         
-        if (opers == null) {
+        if (opersRef.get() == null) {
             
-            opers = loadFile(OPERS);
+            opersRef = new GenericSoftReference<>(loadFile(OPERS));
             
             // Save on shutdown
             Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -232,7 +233,7 @@ public class ConfigData {
                 public void run() {
 
                     try {
-                        opers.save();
+                        opersRef.get().save();
                     }
                     catch (IOException ex) {
                         SharedData.logger.error("Opers file could not be saved.");
@@ -300,12 +301,12 @@ public class ConfigData {
      */
     private static String[] getLines(String lineName) {
         
-        if (lines == null) {
+        if (linesRef.get() == null) {
             
             loadLinesFile();
         }
         
-        return lines.get(lineName);
+        return linesRef.get().get(lineName);
     }
     
     /**
@@ -387,13 +388,13 @@ public class ConfigData {
     
     public static boolean checkOperPassword(String name, String password) throws NoSuchAlgorithmException, IncompleteConfigurationException {
         
-        if (opers == null) {
+        if (opersRef.get() == null) {
             
             loadOperPassFile();
         }
         
         try {
-            return HashUtils.SHA256(password).equals(opers.get(name.toLowerCase())[0]);
+            return HashUtils.SHA256(password).equals(opersRef.get().get(name.toLowerCase())[0]);
         } catch (NullPointerException npe) {
             throw new IncompleteConfigurationException("No such oper");
         }

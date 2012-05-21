@@ -37,7 +37,12 @@ public enum Command {
     /**
      * Sent as a reply when a client successfully joined a channel
      */
-    JOIN                    ("JOIN :%s", 1);
+    JOIN                    ("JOIN %s", 1),
+    
+    /**
+     * Sent as a reply when a client parts a channel
+     */
+    PART                    ("PART %s :%s", 2);
     //</editor-fold>
     
     

@@ -15,11 +15,12 @@
  */
 package net.boreeas.frozenircd.command;
 
+import net.boreeas.frozenircd.Channel;
 import net.boreeas.frozenircd.Server;
 import net.boreeas.frozenircd.config.IncompleteConfigurationException;
 import java.security.NoSuchAlgorithmException;
 import net.boreeas.frozenircd.utils.HashUtils;
-import net.boreeas.frozenircd.utils.ArrayUtils;
+import net.boreeas.frozenircd.utils.StringUtils;
 import net.boreeas.frozenircd.connection.Connection;
 import net.boreeas.frozenircd.utils.SharedData;
 import net.boreeas.frozenircd.connection.client.Client;
@@ -42,6 +43,8 @@ public class ClientCommandParser {
     private static final String MODE = "MODE";
     private static final String QUIT = "QUIT";
     private static final String STOP = "STOP";
+    private static final String JOIN = "JOIN";
+    private static final String PART = "PART";
     
     
     public static void parseClientCommand(String command, Client client, String[] args) {
@@ -87,7 +90,13 @@ public class ClientCommandParser {
                 onUserCommand(client, args);
                 break;
                 
-            
+            case JOIN:
+                onJoinCommand(client, args);
+                break;
+                
+            case PART:
+                onPartCommand(client, args);
+                break;
             
             default:
                 onUnknownCommand(client, command);
@@ -121,7 +130,7 @@ public class ClientCommandParser {
     
     private static void onQuitCommand(Client client, String[] args) {
 
-        String quitMessage = ( args.length == 0 ) ? client.getSafeNickname() : ArrayUtils.joinArray(args);
+        String quitMessage = ( args.length == 0 ) ? client.getSafeNickname() : StringUtils.joinArray(args);
 
         client.disconnect(quitMessage);
     }
@@ -157,12 +166,11 @@ public class ClientCommandParser {
                 client.setUsername(args[0]);
             }
         
-            client.setRealname(ArrayUtils.joinArray(args, 3));
-            client.addFlag('i');
+            client.setRealname(StringUtils.joinArray(args, 3));
         }
         
         
-        if (client.registrationCompleted()) {
+        if (!client.rplWelcomeSent() && client.registrationCompleted()) {
             
             client.onRegistrationComplete();
         }
@@ -203,7 +211,7 @@ public class ClientCommandParser {
         }
         
         
-        if (client.registrationCompleted()) {
+        if (!client.rplWelcomeSent() && client.registrationCompleted()) {
             
             client.onRegistrationComplete();
         }
@@ -305,7 +313,7 @@ public class ClientCommandParser {
             return;
         }
 
-        if (!SharedData.nicknamesEqual(client.getSafeNickname(), args[0])) {
+        if (!SharedData.namesEqual(client.getSafeNickname(), args[0])) {
 
             //Don't allow to set other user's modes
             client.sendStandardFormat(Reply.ERR_USERSDONTMATCH.format(client.getSafeNickname()));
@@ -345,7 +353,7 @@ public class ClientCommandParser {
 
             String reason = "No reason given";
             if (args.length > 0) {
-                reason = ArrayUtils.joinArray(args);
+                reason = StringUtils.joinArray(args);
             }
 
             SharedData.connectionPool.notifyClients(String.format("Server shutting down (STOP command invoked by %s (%s) (Reason: %s))",
@@ -358,11 +366,56 @@ public class ClientCommandParser {
         }
     }
     
+    private static void onJoinCommand(Client client, String[] args) {
+        
+        if (!client.registrationCompleted()) return;    // Drop
+        
+        if (args.length < 1) client.send(Reply.ERR_NEEDMOREPARAMS.format(client.getSafeNickname(), 
+                                                                         JOIN, 
+                                                                         "<channel> [password]"));
+        
+        Channel channel = SharedData.channels.get(SharedData.toLowerCase(args[0]));
+        if (channel == null) {
+            channel = new Channel(args[0]);
+            SharedData.channels.put(SharedData.toLowerCase(args[0]), channel);
+        }
+        
+        channel.joinChannel(client);
+        client.addChannel(channel.getName());
+    }
+    
+    private static void onPartCommand(Client client, String[] args) {
+    
+        if (!client.registrationCompleted()) {
+            return; // Drop silently
+        }
+        
+        if (args.length < 1) {
+            
+            client.sendStandardFormat(Reply.ERR_NEEDMOREPARAMS.format(client.getNickname(), PART, "<channel> [reason]"));
+            return;
+        }
+        
+        if (!client.isInChannel(args[0])) {
+            
+            client.sendStandardFormat(Reply.ERR_NOTONCHANNEL.format(client.getNickname(), args[0]));
+            return;
+        }
+        
+        
+        String reason = client.getNickname();
+        if (args.length >= 2) {
+            reason = StringUtils.joinArray(args, 1);
+        }
+        
+        client.removeChannel(args[0]);
+        SharedData.channels.get(SharedData.toLowerCase(args[0])).partChannel(client, reason);
+    }
     
     
     private static void onUnknownCommand(Client client, String command) {
         
-        client.sendStandardFormat(command);
+        client.sendStandardFormat(Reply.ERR_UNKNOWNCOMMAND.format(client.getSafeNickname(), command));
     }
     
     
@@ -383,7 +436,7 @@ public class ClientCommandParser {
         
         for (Connection conn : SharedData.connectionPool.getConnections()) {
 
-            if (conn != client && SharedData.nicknamesEqual(name, conn.getCommonName())) {
+            if (conn != client && SharedData.namesEqual(name, conn.getCommonName())) {
                 return true;
             }
         }

@@ -88,11 +88,11 @@ public class Channel {
     /**
      * Sends a message to all clients, appearing to originate from the given client
      * @param client The client who sent the message
-     * @param string The message to send
+     * @param message The message to send
      */
-    public void sendFromClient(final Client client, final String string) {
+    public void sendFromClient(final Client client, final String message) {
         
-        sendFromClient(client, name, SharedData.emptyBroadcastFilter);
+        sendFromClient(client, message, SharedData.emptyBroadcastFilter);
     }
     
     /**
@@ -122,5 +122,20 @@ public class Channel {
         if (topic != null) {
             client.sendStandardFormat(Reply.RPL_TOPIC.format(client.getSafeNickname(), this.name, this.topic));
         }
+        
+        // TODO Check RPL_NAMREPLY format
+        // client.sendStandardFormat(Reply.RPL_NAMREPLY.format);
+    }
+    
+    public void partChannel(final Client client, String reason) {
+     
+        sendFromClient(client, Command.PART.format(this.name, reason));
+        
+        clients.remove(client);
+    }
+    
+    public String getName() {
+     
+        return name;
     }
 }

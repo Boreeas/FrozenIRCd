@@ -23,6 +23,7 @@ import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.util.HashSet;
 import java.util.Set;
+import net.boreeas.frozenircd.Channel;
 import net.boreeas.frozenircd.config.ConfigData;
 import net.boreeas.frozenircd.config.ConfigKey;
 import net.boreeas.frozenircd.command.Reply;
@@ -43,13 +44,16 @@ public class Client extends Connection {
     private boolean nickGiven = false;
     private boolean userGiven = false;
     private boolean passGiven = false;
-    
+    private boolean welcomeSent = false; 
+            
     private Set<Character> flags = new HashSet<>();
     
     private String username;
     private String realname;
     private String nickname;
     private String hostname;
+    
+    private Set<String> channels = new HashSet<>();
     
     
     public Client(Socket socket, boolean ssl) throws IOException {
@@ -273,6 +277,11 @@ public class Client extends Connection {
                 && ((ConfigData.getFirstConfigOption(ConfigKey.USING_PASS).equalsIgnoreCase("true")) ? passGiven : true);
     }
     
+    public boolean rplWelcomeSent() {
+        
+        return welcomeSent;
+    }
+    
     public String getHostmask() {
         return String.format("%s!%s@%s", nickname, username, hostname);
     }
@@ -349,15 +358,26 @@ public class Client extends Connection {
     
     public void onRegistrationComplete() {
         
-        sendStandardFormat(Reply.RPL_WELCOME.format(getSafeNickname()));
+        welcomeSent = true;
+        
+        addFlag('i');
+        
+        sendStandardFormat(Reply.RPL_WELCOME.format(nickname, getHostmask()));
+        sendStandardFormat(Reply.RPL_YOURHOST.format(nickname));
+        sendStandardFormat(Reply.RPL_CREATED.format(nickname));
+        sendStandardFormat(Reply.RPL_MYINFO.format(nickname));
+        sendStandardFormat(Reply.RPL_ISUPPORT.format(nickname));
+        
+        sendStandardFormat(Reply.RPL_MOTDSTART.format(nickname));
         
         if (SharedData.motd != null) {
             
             for (String part: SharedData.motd.split("\n")) {
-                
                 sendStandardFormat(Reply.RPL_MOTD.format(nickname, part));
             }
         }
+        
+        sendStandardFormat(Reply.RPL_ENDOFMOTD.format(nickname));
     }
     
     @Override
@@ -365,10 +385,19 @@ public class Client extends Connection {
         return getSafeNickname();
     }
     
-    public Service toService(final ServiceCommandHandler handler, String newNick, String visibility, String type) {
+    
+    public void addChannel(String channel) {
         
-        Service asService = new Service(socket, writer, reader, newNick, visibility, type, uuid);
+        channels.add(SharedData.toLowerCase(channel));
+    }
+    
+    public void removeChannel(String channel) {
         
-        return asService;
+        channels.remove(SharedData.toLowerCase(channel));
+    }
+    
+    public boolean isInChannel(String channel) {
+        
+        return channels.contains(SharedData.toLowerCase(channel));
     }
 }

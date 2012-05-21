@@ -15,6 +15,7 @@
  */
 package net.boreeas.frozenircd.utils;
 
+import net.boreeas.frozenircd.Channel;
 import java.io.IOException;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
@@ -28,6 +29,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import net.boreeas.frozenircd.command.ClientCommandParser;
+import net.boreeas.frozenircd.config.ConfigData;
 import net.boreeas.frozenircd.connection.BroadcastFilter;
 import net.boreeas.frozenircd.connection.Connection;
 import net.boreeas.frozenircd.connection.ConnectionPool;
@@ -115,13 +117,20 @@ public class SharedData {
     public static final ConnectionPool linkPool = new ConnectionPool();
     
     /**
+     * All channels
+     */
+    public static final Map<String, Channel> channels = new HashMap<>();
+    
+    /**
      * A set of all known umodes and their description.
      */
     public static final Map<Character, String> umodes = Collections.unmodifiableMap(generateUmodeDescriptionMap());
+    
     /**
      * A set of all umodes that can be set by a user
      */
     public static final Set<Character> settableUmodes = Collections.unmodifiableSet(generateSettableUmodeSet());
+    
     /**
      * Determines whether a password is needed for a connection
      */
@@ -168,23 +177,23 @@ public class SharedData {
         return string.toLowerCase().replace('[', '{').replace(']', '}').replace('\\', '|').replace('~', '^');
     }
 
-    public static boolean nicknamesEqual(String nick1, String nick2) {
+    public static boolean namesEqual(String firstName, String secondName) {
 
 
-        if (nick1 == nick2) {
+        if (firstName == secondName) {
             return true;
         }
 
-        if ((nick1 == null && nick2 != null) || (nick1 != null && nick2 == null)) {
+        if ((firstName == null && secondName != null) || (firstName != null && secondName == null)) {
             return false;
         }
 
 
-        if (nick1.length() != nick2.length()) {
+        if (firstName.length() != secondName.length()) {
             return false;
         }
 
-        return toLowerCase(nick1).equals(toLowerCase(nick2));
+        return toLowerCase(firstName).equals(toLowerCase(secondName));
     }
 
     /**
@@ -221,6 +230,23 @@ public class SharedData {
 
         return new String(oldChars, 0, newLen);
     }
+    
+    public static String buildUModeString() {
+        
+        return StringUtils.joinIterable(umodes.keySet(), "");
+    }
+    
+    public static String buildCModeString() {
+        
+        // TODO Fix cmodes
+        return "CMODES_NOT_SUPPORTED_YET";
+    }
+    
+    public static boolean isChanTypeSupported(char chantype) {
+        
+        return chantype == '#' || chantype == '~';
+    }
+    
 
     private static Set<Character> generateSettableUmodeSet() {
 
