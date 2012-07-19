@@ -67,7 +67,7 @@ public class IdentDaemon extends Thread {
                 throw new IOException();    // No ident reponse
             }
 
-            client.setIdentified(true);
+            client.setIdentResponseReceived(true);
             client.setUsername(id);
 
         }

@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import net.boreeas.frozenircd.command.ClientCommandParser;
-import net.boreeas.frozenircd.config.ConfigData;
 import net.boreeas.frozenircd.connection.BroadcastFilter;
 import net.boreeas.frozenircd.connection.Connection;
 import net.boreeas.frozenircd.connection.ConnectionPool;
@@ -119,23 +118,19 @@ public class SharedData {
     /**
      * All channels
      */
-    public static final Map<String, Channel> channels = new HashMap<>();
+    private static final Map<String, Channel> channels = new HashMap<>();
     
-    /**
-     * A set of all known umodes and their description.
-     */
-    public static final Map<Character, String> umodes = Collections.unmodifiableMap(generateUmodeDescriptionMap());
-    
-    /**
-     * A set of all umodes that can be set by a user
-     */
-    public static final Set<Character> settableUmodes = Collections.unmodifiableSet(generateSettableUmodeSet());
-    
+ 
     /**
      * Determines whether a password is needed for a connection
      */
     public static final boolean passwordNeeded = getFirstConfigOption(USING_PASS).equalsIgnoreCase("true");
 
+    /**
+     * Determines whether opers can set modes for other users and modes for channels they are not part of.
+     */
+    public static final boolean operCanSetModes = getFirstConfigOption(OPER_CANSETMODE).equalsIgnoreCase("true");
+    
     /**
      * The pattern that nicknames must adhere to
      */
@@ -177,30 +172,30 @@ public class SharedData {
         return string.toLowerCase().replace('[', '{').replace(']', '}').replace('\\', '|').replace('~', '^');
     }
 
-    public static boolean namesEqual(String firstName, String secondName) {
+    public static boolean stringsEqual(String first, String second) {
 
 
-        if (firstName == secondName) {
+        if (first == second) {
             return true;
         }
 
-        if ((firstName == null && secondName != null) || (firstName != null && secondName == null)) {
+        if ((first == null && second != null) || (first != null && second == null)) {
             return false;
         }
 
 
-        if (firstName.length() != secondName.length()) {
+        if (first.length() != second.length()) {
             return false;
         }
 
-        return toLowerCase(firstName).equals(toLowerCase(secondName));
+        return toLowerCase(first).equals(toLowerCase(second));
     }
 
     /**
-     * Removes all non-printable characters from a string, as well as any : or ,
+     * Removes all non-printable characters from a string, as well as any : or ,<br />
+     * Solution provided by ratchet freak (http://stackoverflow.com/a/7161653)
      * @param s The string to clean
      * @return The cleaned string
-     * @author http://stackoverflow.com/a/7161653
      */
     public static String cleanString(String s) {
 
@@ -231,41 +226,26 @@ public class SharedData {
         return new String(oldChars, 0, newLen);
     }
     
-    public static String buildUModeString() {
-        
-        return StringUtils.joinIterable(umodes.keySet(), "");
-    }
-    
-    public static String buildCModeString() {
-        
-        // TODO Fix cmodes
-        return "CMODES_NOT_SUPPORTED_YET";
-    }
-    
     public static boolean isChanTypeSupported(char chantype) {
         
-        return chantype == '#' || chantype == '~';
+        return chantype == '#';
     }
     
-
-    private static Set<Character> generateSettableUmodeSet() {
-
-        Set<Character> set = new HashSet<>();
-
-        set.add('i');
-
-        return set;
+    public static Channel getChannel(String name) {
+        
+        return channels.get(toLowerCase(name));
     }
-
-    private static Map<Character, String> generateUmodeDescriptionMap() {
-
-        Map<Character, String> map = new HashMap<>();
-
-        map.put('o', "Designates a user as IRC Operator. This mode can only be set by use of the OPER command");
-        map.put('i', "Designates a client as invisible, which makes you harder to find.");
-
-        return map;
+    
+    public static void addChannel(Channel channel) {
+        
+        channels.put(toLowerCase(channel.getName()), channel);
     }
+    
+    public static void removeChannel(String name) {
+        
+        channels.remove(toLowerCase(name));
+    }
+    
     
     /**
      * Returns the content of the MOTD file, or <code>null</code> if no MOTD file is present

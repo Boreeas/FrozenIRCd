@@ -29,7 +29,7 @@ import net.boreeas.frozenircd.utils.SharedData;
  *
  * @author Boreeas
  */
-public class Channel {
+public class Channel implements Flagable {
     
     /**
      * The name for the channel.
@@ -137,5 +137,35 @@ public class Channel {
     public String getName() {
      
         return name;
+    }
+
+    @Override
+    public String flags() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public void removeFlags(String flagString) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public void removeFlag(char flag) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public void addFlags(String flagString) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public void addFlag(char flag) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public boolean hasFlag(char flag) {
+        throw new UnsupportedOperationException("Not supported yet.");
     }
 }

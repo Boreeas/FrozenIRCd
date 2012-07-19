@@ -1,0 +1,6 @@
+Currently working on:
+=====================
+- CMode integration
+ - Results in a complete MODE system rework, see net.boreeas.frozenircd.command.Mode
+
+- Glob Matching

@@ -24,6 +24,7 @@ import java.net.Socket;
 import java.util.HashSet;
 import java.util.Set;
 import net.boreeas.frozenircd.Channel;
+import net.boreeas.frozenircd.Flagable;
 import net.boreeas.frozenircd.config.ConfigData;
 import net.boreeas.frozenircd.config.ConfigKey;
 import net.boreeas.frozenircd.command.Reply;
@@ -36,7 +37,7 @@ import net.boreeas.frozenircd.connection.service.ServiceCommandHandler;
  *
  * @author Boreeas
  */
-public class Client extends Connection {
+public class Client extends Connection implements Flagable {
 
     private boolean ssl;
     
@@ -70,8 +71,14 @@ public class Client extends Connection {
         
     }
 
+    
+    // Communications
+    
+    /**
+     * Sends a message to the client
+     * @param line The message to send
+     */
     public void send(String line) {
-        
         
         try {
             
@@ -90,7 +97,7 @@ public class Client extends Connection {
     }
     
     /**
-     * Sends the text in the standard format, that is <code>:<serverhostname> <line><\r\n></code>
+     * Sends the text in the standard format, that is <code>:< serverhostname > < line >\r\n</code>
      * @param The line to send
      */
     public void sendStandardFormat(String line) {
@@ -98,20 +105,38 @@ public class Client extends Connection {
         send(String.format(":%s %s", ConfigData.getFirstConfigOption(ConfigKey.HOST), line));
     }
     
+    /**
+     * Sends a notice to the user.
+     * @param senderHostmask The hostmask of the sender
+     * @param receiver The receiver of the notice
+     * @param message The message to send
+     */
     public void sendNotice(String senderHostmask, String receiver, String message) {
         
         send(String.format(":%s NOTICE %s :%s", senderHostmask, receiver, message));
     }
     
+    /**
+     * Sends a private message to the user
+     * @param senderHostmask The hostmask of the sender
+     * @param receiver The receiver of the notice
+     * @param message The message to send
+     */
     public void sendPrivateMessage(String senderHostmask, String receiver, String message) {
         
         send(String.format(":%s PRIVMSG %s :%s", senderHostmask, receiver, message));
     }
     
+    /**
+     * Kills the connection to the user. Equivalent to
+     * calling <code>disconnect("Killed: " + reason)</code>.
+     * @param reason The reason why the connection was killed
+     */
     public void kill(String reason) {
         
         disconnect("Killed: " + reason);
     }
+    
     
     /**
      * Tells whether this is an ssl connection or not.
@@ -120,136 +145,6 @@ public class Client extends Connection {
     public boolean isSSLConnection() {
         
         return ssl;
-    }
-
-    
-    /**
-     * Tells whether a client has a certain flag
-     * @param flag The flag to check
-     * @return <code>true</code> if the client has the flag <code>flag</code>, false otherwise
-     */
-    public boolean hasFlag(char flag) {
-        
-        return flags.contains(flag);
-    }
-    
-    /**
-     * Adds a mode flag for the client and notifies all input handlers of the mode change
-     * @param flag The flag to add
-     */
-    public void addFlag(char flag) {
-        
-        if (!SharedData.settableUmodes.contains(flag)) {
-            send(Reply.ERR_UMODEUNKNOWNFLAG.format(getSafeNickname(), flag));
-            return;
-        }
-        
-        flags.add(flag);
-        
-        onModeChange();
-    }
-    
-    public void addFlagByServer(char flag) {
-        
-        flags.add(flag);
-        onModeChange();
-    }
-    
-    /**
-     * Adds all chars in the string to the client
-     * @param flagString 
-     */
-    public void addFlags(String flagString) {
-        
-        for (char flag: flagString.toCharArray()) {
-            
-            if (!SharedData.settableUmodes.contains(flag)) {
-                
-                send(Reply.ERR_UMODEUNKNOWNFLAG.format(getSafeNickname(), flag));
-            } else {
-            
-                flags.add(flag);
-            }
-        }
-        
-        onModeChange();
-    }
-    
-    /**
-     * Removes a mode flag from the client and notifies all input handlers of the mode change
-     * @param flag The flag to remove
-     */
-    public void removeFlag(char flag) {
-
-        if (flag == 'r') {
-            
-            send(Reply.ERR_UMODEUNKNOWNFLAG.format(getSafeNickname(), "Cannot set umode -r"));
-            return;
-        }
-        
-        flags.remove(flag);
-        
-        onModeChange();
-    }
-    
-    public void removeFlagByServer(char flag) {
-        
-        flags.remove(flag);
-        onModeChange();
-    }
-    
-    public void removeFlags(String flagString) {
-        
-        for (char flag: flagString.toCharArray()) {
-            
-            if (flag == 'r') {
-                
-                send(Reply.ERR_UMODEUNKNOWNFLAG.format(getSafeNickname(), "Cannot set umode -r"));
-            } else {
-            
-                flags.remove(flag);
-            }
-        }
-        
-        onModeChange();
-    }
-    
-    /**
-     * Returns the mode string for the client
-     * @return The mode string for the client
-     */
-    public String flags() {
-        
-        StringBuilder builder = new StringBuilder();
-        
-        for (Character character: flags) {
-            
-            builder.append(character);
-        }
-        
-        return builder.toString();
-    }
-    
-    public String getRealname() {
-        return realname;
-    }
-    
-    public String getNickname() {
-        return nickname;
-    }
-    
-    /**
-     * Returns the nickname for this client, or <code>*</code> if no nickname
-     * has been given.
-     * @return The nickname, or *
-     */
-    public String getSafeNickname() {
-        
-        return (nickname == null) ? "*" : nickname;
-    }
-    
-    public String getUsername() {
-        return username;
     }
     
     public String getHostname() {
@@ -282,19 +177,55 @@ public class Client extends Connection {
         return welcomeSent;
     }
     
+    
+    
+    public String getRealname() {
+        return realname;
+    }
+    
+    public String getNickname() {
+        return nickname;
+    }
+    
+    /**
+     * Returns the nickname for this client, or <code>*</code> if no nickname
+     * has been given.
+     * @return The nickname, or *
+     */
+    public String getSafeNickname() {
+        
+        return (nickname == null) ? "*" : nickname;
+    }
+    
+    public String getUsername() {
+        return username;
+    }
+    
     public String getHostmask() {
         return String.format("%s!%s@%s", nickname, username, hostname);
     }
-
+    
+    /**
+     * Sets the nickname of this user to <code>nickname</code>.
+     * @param nickname The new nickname
+     */
     public void setNickname(String nickname) {
         this.nickname = SharedData.cleanString(nickname);
         nickGiven = true;
     }
 
+    /**
+     * Sets the real name of this user to <code>realname</code>.
+     * @param realname The real name
+     */
     public void setRealname(String realname) {
         this.realname = SharedData.cleanString(realname);
     }
 
+    /**
+     * Sets the username of this user to <code>username</code>.
+     * @param username The username
+     */
     public void setUsername(String username) {
         
         if (!identdResponse) {
@@ -305,18 +236,34 @@ public class Client extends Connection {
         userGiven = true;
     }
     
+    /**
+     * Sets the host name of this user to <code>hostname</code>.
+     * @param hostname The host name
+     */
     public void setHostname(String hostname) {
         this.hostname = SharedData.cleanString(hostname);
     }
     
-    public void setIdentified(boolean flag) {
+    /**
+     * Toggles the flag that marks if this user replied to the ident request.
+     * @param flag Marks if the user replied or not.
+     */
+    public void setIdentResponseReceived(boolean flag) {
         this.identdResponse = flag;
     }
     
     public void setPassGiven(boolean flag) {
         this.passGiven = true;
     }
-
+    
+    @Override
+    public String getCommonName() {
+        return getSafeNickname();
+    }
+    
+    
+    
+    // Event hooks
     @Override
     public void onInput(String input) {
         
@@ -380,24 +327,111 @@ public class Client extends Connection {
         sendStandardFormat(Reply.RPL_ENDOFMOTD.format(nickname));
     }
     
-    @Override
-    public String getCommonName() {
-        return getSafeNickname();
-    }
     
     
+    
+    // Channel operations
+    
+    /**
+     * Adds a channel to this user's channel list. Also call 
+     * the joinChannel method of the Channel class to make
+     * this change visible.
+     * @param channel The name of the channel to add
+     */
     public void addChannel(String channel) {
         
-        channels.add(SharedData.toLowerCase(channel));
+        channels.add(channel);
     }
     
+    /**
+     * Removes a channel from this user's channel list. Also
+     * call the partChannel method of the Channel class to
+     * make this change visible.
+     * @param channel The name of the channel to remove
+     */
     public void removeChannel(String channel) {
         
-        channels.remove(SharedData.toLowerCase(channel));
+        channels.remove(channel);
     }
     
+    /**
+     * Tells whether a client is currently in a channel.
+     * @param channel The name of the channel to check
+     */
     public boolean isInChannel(String channel) {
         
-        return channels.contains(SharedData.toLowerCase(channel));
+        return channels.contains(channel);
+    }
+    
+    /**
+     * Broadcasts a message to all channels this user is in.
+     * @param message The message to send.
+     */
+    public void broadcastToChannels(String message) {
+        
+        for (String channel: channels) {
+            
+            Channel chan = SharedData.getChannel(channel);
+            chan.sendFromClient(this, message);
+        }
+    }
+    
+    
+    // Flag interface
+    
+    
+    public boolean hasFlag(char flag) {
+        
+        return flags.contains(flag);
+    }
+    
+    
+    public void addFlag(char flag) {
+                
+        flags.add(flag);
+        onModeChange();
+    }
+    
+    
+    public void addFlags(String flagString) {
+        
+        for (char flag: flagString.toCharArray()) {
+            
+           flags.add(flag);
+        }
+        
+        onModeChange();
+    }
+    
+    
+    public void removeFlag(char flag) {
+
+        flags.remove(flag);
+        onModeChange();
+    }
+    
+    
+    public void removeFlags(String flagString) {
+        
+        // TODO sanity check in CommandParser
+        for (char flag: flagString.toCharArray()) {
+            
+            flags.remove(flag);
+        }
+        
+        onModeChange();
+    }
+    
+    
+    public String flags() {
+        
+        StringBuilder builder = new StringBuilder();
+        
+        for (Character character: flags) {
+            
+            builder.append(character);
+        }
+        
+        return builder.toString();
     }
 }

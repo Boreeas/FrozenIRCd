@@ -15,6 +15,9 @@
  */
 package net.boreeas.frozenircd.command;
 
+import net.boreeas.frozenircd.config.ConfigData;
+import net.boreeas.frozenircd.config.ConfigKey;
+
 /**
  *
  * @author Boreeas
@@ -42,7 +45,12 @@ public enum Command {
     /**
      * Sent as a reply when a client parts a channel
      */
-    PART                    ("PART %s :%s", 2);
+    PART                    ("PART %s :%s", 2),
+    
+    /**
+     * Sent when a client disconnects
+     */
+    QUIT                    ("QUIT " + ConfigData.getFirstConfigOption(ConfigKey.HOST) + " :%s", 1);
     //</editor-fold>
     
     

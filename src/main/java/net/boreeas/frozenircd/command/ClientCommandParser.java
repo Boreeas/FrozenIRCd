@@ -34,17 +34,17 @@ import static net.boreeas.frozenircd.config.ConfigKey.*;
  */
 public class ClientCommandParser {
     
-    private static final String PING = "PING";
-    private static final String PONG = "PONG";
-    private static final String USER = "USER";
-    private static final String NICK = "NICK";
-    private static final String PASS = "PASS";
-    private static final String OPER = "OPER";
-    private static final String MODE = "MODE";
-    private static final String QUIT = "QUIT";
-    private static final String STOP = "STOP";
-    private static final String JOIN = "JOIN";
-    private static final String PART = "PART";
+    public static final String PING = "PING";
+    public static final String PONG = "PONG";
+    public static final String USER = "USER";
+    public static final String NICK = "NICK";
+    public static final String PASS = "PASS";
+    public static final String OPER = "OPER";
+    public static final String MODE = "MODE";
+    public static final String QUIT = "QUIT";
+    public static final String STOP = "STOP";
+    public static final String JOIN = "JOIN";
+    public static final String PART = "PART";
     
     
     public static void parseClientCommand(String command, Client client, String[] args) {
@@ -132,6 +132,8 @@ public class ClientCommandParser {
 
         String quitMessage = ( args.length == 0 ) ? client.getSafeNickname() : StringUtils.joinArray(args);
 
+        client.broadcastToChannels(Command.QUIT.format(quitMessage));
+        
         client.disconnect(quitMessage);
     }
     
@@ -298,7 +300,7 @@ public class ClientCommandParser {
         }
 
         client.sendStandardFormat(Reply.RPL_YOUREOPER.format(client.getSafeNickname()));
-        client.addFlagByServer('o');
+        client.addFlag('o');
     }
     
     private static void onModeCommand(Client client, String[] args) {
@@ -307,13 +309,22 @@ public class ClientCommandParser {
             return;
         }
 
-        if (args.length < 1) {
+        if (args.length < 1 || args[0].length() < 1) {
 
             client.sendStandardFormat(Reply.ERR_NEEDMOREPARAMS.format(client.getSafeNickname(), MODE, "<nick> [mode string]"));
             return;
         }
+        
+        
+        // Check if the target is a channel
+        if (SharedData.isChanTypeSupported(args[0].charAt(0))) {
+            
+            onChannelModeCommand(client, args[0], args);
+            return;
+        }
+        
 
-        if (!SharedData.namesEqual(client.getSafeNickname(), args[0])) {
+        if (!SharedData.stringsEqual(client.getSafeNickname(), args[0])) {
 
             //Don't allow to set other user's modes
             client.sendStandardFormat(Reply.ERR_USERSDONTMATCH.format(client.getSafeNickname()));
@@ -326,25 +337,23 @@ public class ClientCommandParser {
             return;
         }
 
-        if (args[1].startsWith("-")) {
-
-            if (args[1].length() < 2) {
-                return;
+        // Are we setting or removing umodes?
+        boolean adding = true;
+        
+        for (char c: args[1].toCharArray()) {
+            
+            if (c == '+') {
+                
+                adding = true;
+            } else if (c == '-') {
+                
+                adding = false;
+            } else {
+                
+                Mode.handleModeChange(c, client, client, adding, args);
             }
-
-            client.removeFlags(args[1].substring(1));
-            return;
         }
-
-        if (args[1].startsWith("+")) {
-            if (args[1].length() < 2) {
-                return;
-            }
-
-            args[1] = args[1].substring(1);
-        }
-
-        client.addFlags(args[1]);
+        
     }
     
     private static void onStopCommand(Client client, String[] args) {
@@ -374,10 +383,10 @@ public class ClientCommandParser {
                                                                          JOIN, 
                                                                          "<channel> [password]"));
         
-        Channel channel = SharedData.channels.get(SharedData.toLowerCase(args[0]));
+        Channel channel = SharedData.getChannel(args[0]);
         if (channel == null) {
-            channel = new Channel(args[0]);
-            SharedData.channels.put(SharedData.toLowerCase(args[0]), channel);
+            channel = new Channel(SharedData.toLowerCase(args[0]));
+            SharedData.addChannel(channel);
         }
         
         channel.joinChannel(client);
@@ -396,7 +405,9 @@ public class ClientCommandParser {
             return;
         }
         
-        if (!client.isInChannel(args[0])) {
+        String channel = SharedData.toLowerCase(args[0]);
+        
+        if (!client.isInChannel(channel)) {
             
             client.sendStandardFormat(Reply.ERR_NOTONCHANNEL.format(client.getNickname(), args[0]));
             return;
@@ -408,8 +419,8 @@ public class ClientCommandParser {
             reason = StringUtils.joinArray(args, 1);
         }
         
-        client.removeChannel(args[0]);
-        SharedData.channels.get(SharedData.toLowerCase(args[0])).partChannel(client, reason);
+        client.removeChannel(channel);
+        SharedData.getChannel(channel).partChannel(client, reason);
     }
     
     
@@ -418,6 +429,21 @@ public class ClientCommandParser {
         client.sendStandardFormat(Reply.ERR_UNKNOWNCOMMAND.format(client.getSafeNickname(), command));
     }
     
+    private static void onUserModeCommand(Client client, String[] args) {
+        
+        // TODO Move mode command
+    }
+    
+    private static void onChannelModeCommand(Client client, String target, String[] args) {
+        
+        Channel channel = SharedData.getChannel(target);
+        
+        if (channel == null || client.isInChannel(target)) {
+            
+            client.send(Reply.ERR_NOTONCHANNEL.format(target));
+            return;
+        }
+    }
     
     
     private static boolean isNameBlacklisted(String name) {
@@ -436,7 +462,7 @@ public class ClientCommandParser {
         
         for (Connection conn : SharedData.connectionPool.getConnections()) {
 
-            if (conn != client && SharedData.namesEqual(name, conn.getCommonName())) {
+            if (conn != client && SharedData.stringsEqual(name, conn.getCommonName())) {
                 return true;
             }
         }

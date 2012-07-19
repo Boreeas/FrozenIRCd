@@ -52,8 +52,7 @@ public enum Reply {
      */
     RPL_MYINFO              ("004 %s " + ConfigData.getFirstConfigOption(ConfigKey.HOST) + 
                                    " " + SharedData.BUILD_IDENTIFIER + 
-                                   " " + SharedData.buildUModeString() +
-                                   " " + SharedData.buildCModeString(), 1),
+                                   " " + Mode.UMODES + " " + Mode.CMODES, 1),
     
     /**
      * Sent when a client finished registration to give them further information about the server.<br />
@@ -135,10 +134,12 @@ public enum Reply {
      */
     ERR_NICKNAMEINUSE       ("433 %s :Nickname already in use: %s", 2),
     
+    
     /**
-     * Sent whenever a client attempts to use a command on a channel they are not a member of
+     * Sent whenever a client attempts to use a command on a channel they are not a member of.<br />
+     * Parameters: nick, channel
      */
-    ERR_NOTONCHANNEL        ("442 %s %s :Need to be in channel", 2),
+    ERR_NOTONCHANNEL        ("442 %s :Need to be in channel: %s", 2),
     
     /**
      * Sent when a command expects more parameters than were given by the client.<br />
@@ -158,6 +159,12 @@ public enum Reply {
      * Parameters: nick
      */
     ERR_PASSWDMISMATCH      ("464 %s :Invalid password", 1),
+    
+    /**
+     * Send when a client attempts to set an unknown mode flag.<br />
+     * Parameters: nick, flag
+     */
+    ERR_UNKNOWNMODE         ("472 %s :Unknown mode flag %s", 2),
     
     /**
      * Sent when an OPER-command is used by a non-OPER.<br />
@@ -181,7 +188,13 @@ public enum Reply {
      * Sent when a client attempts to set umodes for a client other than themselves.<br />
      * Parameters: nick
      */
-    ERR_USERSDONTMATCH      ("502 %s :Can't set mode on other user", 1);
+    ERR_USERSDONTMATCH      ("502 %s :Can't set mode on other user", 1),
+    
+    /**
+     * Sent when a client attempts to manually set a mode which can only be set by a service or the server.<br />
+     * Parameters: nick, flag
+     */
+    ERR_CANTSET             ("999 %s :Can't set mode manually: %s", 2);
     //</editor-fold>
     
     

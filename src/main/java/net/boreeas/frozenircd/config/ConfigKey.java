@@ -23,25 +23,33 @@ package net.boreeas.frozenircd.config;
  */
 public enum ConfigKey {
     
-    HOST                ("hostname"),
-    DESCRIPTION         ("description"),
-    USING_PASS          ("using.pass"),
-    PORTS               ("ports"),
+    // Misc. server information
+    HOST                ("hostname"),       // The bindhost for the server
+    DESCRIPTION         ("description"),    // The description of a server
+    USING_PASS          ("using.pass"),     // Using a password for user connections?
+    PORTS               ("ports"),          // The open ports
     
+    // Nick configuration
     MIN_NICK_LENGTH     ("nick.length.min"),
     MAX_NICK_LENGTH     ("nick.length.max"),
     NICK_PATTERN        ("nick.pattern"),
     BLACKLISTED_NICKS   ("nick.blacklist"),
     
+    // Pings and keep-alives
     PING_FREQUENCY      ("ping.frequency"),
     PING_TIMEOUT        ("ping.timeout"),
     CONNECT_TIMEOUT     ("connect.timeout"),
     
+    // (Unique) connection token
     TOKEN               ("token"),
     
+    // Passwords for connections
     LINK_PASS           ("password.server"),
     SERVICE_PASS        ("password.service"),
-    USER_PASS           ("password.user");
+    USER_PASS           ("password.user"),
+    
+    // Can an oper set another users or channels mode?
+    OPER_CANSETMODE     ("oper.setmode");
     
     
     private String key;
