@@ -111,6 +111,18 @@ public enum Reply {
     
     //<editor-fold defaultstate="collapsed" desc="ERR - Error messages">
     /**
+     * Sent if an error occurred that can not be resolved right now.<br />
+     * Parameters: nick, command
+     */
+    ERR_UNKNOWNERROR        ("400 %s %s: Internal server error while processing command.", 2),
+    
+    /**
+     * Sent if a command targets a channel that does not exist.<br />
+     * Parameters: nick, channel
+     */
+    ERR_NOSUCHCHANNEL       ("403 %s %s :No such channel", 2),
+    
+    /**
      * Sent if a command by a client was not recognized.<br />
      * Parameters: nick, command
      */

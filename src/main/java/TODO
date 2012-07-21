@@ -1,6 +1,3 @@
 Currently working on:
 =====================
-- CMode integration
-- Switch all mode changes to Mode.onModeChange
-
 - Switching matchings to glob matching

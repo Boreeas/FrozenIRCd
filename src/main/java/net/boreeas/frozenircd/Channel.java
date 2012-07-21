@@ -103,7 +103,7 @@ public class Channel implements Flagable {
      */
     public void sendFromClient(final Client client, final String message, final BroadcastFilter filter) {
         
-        final String actualMessage = ":" + client.getHostmask() + " " + message;
+        final String actualMessage = ":" + client.getDisplayHostmask() + " " + message;
         
         for (final Client other: clients) {
             

@@ -26,6 +26,8 @@ import net.boreeas.frozenircd.utils.SharedData;
  */
 public class Mode {
     
+    public static final char NO_FLAG = '0';
+    
     //<editor-fold defaultstate="collapsed" desc="umodes">
     public static final String UMODES = "ior";
     
@@ -39,19 +41,20 @@ public class Mode {
     //</editor-fold>
     
     
-    public static void handleModeChange(char mode, Client user, Flagable target, boolean adding, String[] args) {
-        
+    public static int handleModeChange(char mode, Client user, Flagable target, boolean adding, String[] args, int argIndex) {
+                
         if (target instanceof Client) {
             
             // Only opers can set modes for other users
             if (user != target && (!user.hasFlag(UMODE_OPER) || !SharedData.operCanSetModes)) {
                 user.sendStandardFormat(Reply.ERR_USERSDONTMATCH.format(user.getNickname()));
-                return;
+                return argIndex;
             }
             
             if (mode == UMODE_OPER)             processUmodeOper(user, target, adding);
             else if (mode == UMODE_INVISIBLE)   processUmodeInvisible(target, adding);
             else if (mode == UMODE_REGISTERED)  processUmodeRegistered(user, target, adding);
+            else if (mode == NO_FLAG) user.sendStandardFormat(Reply.RPL_UMODEIS.format(user.getNickname(), user.flags()));
             
             else {
                 user.sendStandardFormat(Reply.ERR_UMODEUNKNOWNFLAG.format(user.getNickname(), mode));
@@ -62,9 +65,8 @@ public class Mode {
             // Only opers can set modes for channels they are not in
             if (!user.isInChannel(chan.getName()) && (!user.hasFlag(UMODE_OPER) || !SharedData.operCanSetModes)) {
                 user.sendStandardFormat(Reply.ERR_NOTONCHANNEL.format(user.getNickname(), chan.getName()));
-                return;
+                return argIndex;
             }
-            
             
         } else {
             
@@ -75,7 +77,7 @@ public class Mode {
             }
         }
         
-        
+        return argIndex;
     }
     
     private static void processUmodeOper(Client user, Flagable target, boolean adding) {

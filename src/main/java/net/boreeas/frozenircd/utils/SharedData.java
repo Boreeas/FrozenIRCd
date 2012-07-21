@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import net.boreeas.frozenircd.command.ClientCommandParser;
+import net.boreeas.frozenircd.command.Reply;
 import net.boreeas.frozenircd.connection.BroadcastFilter;
 import net.boreeas.frozenircd.connection.Connection;
 import net.boreeas.frozenircd.connection.ConnectionPool;
@@ -86,6 +87,7 @@ public class SharedData {
         }
     };
 
+    // TODO remove this - This belongs in ClientCommandParser
     public static void onClientCommand(Client client, String command, String[] args) {
 
         command = command.trim();
@@ -95,8 +97,7 @@ public class SharedData {
             ClientCommandParser.parseClientCommand(command, client, args);
         } catch (Exception ex) {
 
-            client.sendNotice(getFirstConfigOption(HOST), client.getSafeNickname(),
-                              "Internal server error while processing command.");
+            client.sendStandardFormat(Reply.ERR_UNKNOWNERROR.format(client.getSafeNickname(), command));
             
             logger.error(String.format("Unhandled exception during command handling.\n"
                     + "\tCommand: %s\n"

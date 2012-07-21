@@ -25,6 +25,7 @@ import java.util.HashSet;
 import java.util.Set;
 import net.boreeas.frozenircd.Channel;
 import net.boreeas.frozenircd.Flagable;
+import net.boreeas.frozenircd.command.Mode;
 import net.boreeas.frozenircd.config.ConfigData;
 import net.boreeas.frozenircd.config.ConfigKey;
 import net.boreeas.frozenircd.command.Reply;
@@ -202,7 +203,15 @@ public class Client extends Connection implements Flagable {
     }
     
     public String getHostmask() {
-        return String.format("%s!%s@%s", nickname, username, hostname);
+        return nickname + "!" + username + "@" + hostname;
+    }
+    
+    public String getDisplayHostmask() {
+       
+        String hostmask = nickname + "!";
+        if (!receivedIdentResponse()) hostmask += '~';
+        
+        return hostmask + username + "@" + hostname;
     }
     
     /**
@@ -210,6 +219,7 @@ public class Client extends Connection implements Flagable {
      * @param nickname The new nickname
      */
     public void setNickname(String nickname) {
+        
         this.nickname = SharedData.cleanString(nickname);
         nickGiven = true;
     }
@@ -227,11 +237,7 @@ public class Client extends Connection implements Flagable {
      * @param username The username
      */
     public void setUsername(String username) {
-        
-        if (!identdResponse) {
-            username = "~" + username;
-        }
-        
+                
         this.username = SharedData.cleanString(username);
         userGiven = true;
     }
@@ -307,7 +313,7 @@ public class Client extends Connection implements Flagable {
         
         welcomeSent = true;
         
-        addFlag('i');
+        addFlag(Mode.UMODE_INVISIBLE);
         
         sendStandardFormat(Reply.RPL_WELCOME.format(nickname, getHostmask()));
         sendStandardFormat(Reply.RPL_YOURHOST.format(nickname));
@@ -351,7 +357,7 @@ public class Client extends Connection implements Flagable {
      */
     public void removeChannel(String channel) {
         
-        channels.remove(channel);
+        channels.remove(SharedData.toLowerCase(channel));
     }
     
     /**
@@ -360,7 +366,7 @@ public class Client extends Connection implements Flagable {
      */
     public boolean isInChannel(String channel) {
         
-        return channels.contains(channel);
+        return channels.contains(SharedData.toLowerCase(channel));
     }
     
     /**

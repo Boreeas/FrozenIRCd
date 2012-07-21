@@ -15,6 +15,7 @@
  */
 package net.boreeas.frozenircd.command;
 
+import net.boreeas.frozenircd.Flagable;
 import net.boreeas.frozenircd.Channel;
 import net.boreeas.frozenircd.Server;
 import net.boreeas.frozenircd.config.IncompleteConfigurationException;
@@ -139,7 +140,7 @@ public class ClientCommandParser {
     
     private static void onUserCommand(Client client, String[] args) {
 
-        if (SharedData.passwordNeeded && ( client.passGiven() == null )) {
+        if (SharedData.passwordNeeded && (client.passGiven() == null)) {
 
             return; // Drop silently
         }
@@ -240,8 +241,7 @@ public class ClientCommandParser {
         String hash;
         try {
             hash = HashUtils.SHA256(args[0]);
-        }
-        catch (NoSuchAlgorithmException ex) {
+        } catch (NoSuchAlgorithmException ex) {
             SharedData.logger.error("Disconnecting user because password hash could not be calculated.", ex);
             client.disconnect("Password could not be matched - hash algorithm defect.");
             return;
@@ -284,15 +284,13 @@ public class ClientCommandParser {
                 client.sendStandardFormat(Reply.ERR_PASSWDMISMATCH.format(client.getSafeNickname()));
                 return;
             }
-        }
-        catch (NoSuchAlgorithmException ex) {
+        } catch (NoSuchAlgorithmException ex) {
 
             // Something went seriously wrong here
             SharedData.logger.error("Unable to generate password hash for OPER", ex);
             client.sendNotice(getFirstConfigOption(HOST), client.getSafeNickname(), "Unable to generate password hash");
             return;
-        }
-        catch (IncompleteConfigurationException ex) {
+        } catch (IncompleteConfigurationException ex) {
 
             // The given name is not configured as oper
             client.sendNotice(getFirstConfigOption(HOST), client.getSafeNickname(), "No such oper: " + args[0]);
@@ -300,7 +298,7 @@ public class ClientCommandParser {
         }
 
         client.sendStandardFormat(Reply.RPL_YOUREOPER.format(client.getSafeNickname()));
-        client.addFlag('o');
+        client.addFlag(Mode.UMODE_OPER);
     }
     
     private static void onModeCommand(Client client, String[] args) {
@@ -311,34 +309,31 @@ public class ClientCommandParser {
 
         if (args.length < 1 || args[0].length() < 1) {
 
-            client.sendStandardFormat(Reply.ERR_NEEDMOREPARAMS.format(client.getSafeNickname(), MODE, "<nick> [mode string]"));
+            client.sendStandardFormat(Reply.ERR_NEEDMOREPARAMS.format(client.getSafeNickname(), MODE, "<nick/chan> [mode string]"));
             return;
         }
         
+        Flagable target = client;
         
         // Check if the target is a channel
         if (SharedData.isChanTypeSupported(args[0].charAt(0))) {
             
-            onChannelModeCommand(client, args[0], args);
-            return;
-        }
-        
-
-        if (!SharedData.stringsEqual(client.getSafeNickname(), args[0])) {
-
-            //Don't allow to set other user's modes
-            client.sendStandardFormat(Reply.ERR_USERSDONTMATCH.format(client.getSafeNickname()));
-            return;
+            target = SharedData.getChannel(args[0]);
+            
+            if (target == null) {
+                client.sendStandardFormat(ERR_NOSUCHCHANNEL.format(client.getNickname(), args[0]));
+                return;
+            }
         }
 
         if (args.length == 1) {
-
-            client.sendStandardFormat(Reply.RPL_UMODEIS.format(client.getSafeNickname(), client.getSafeNickname(), client.flags()));
+            // Ignore mode requests for channels
+            Mode.handleModeChange(Mode.NO_FLAG, client, client, true, args, 0);
             return;
         }
 
-        // Are we setting or removing umodes?
-        boolean adding = true;
+        boolean adding = true;  // Setting or removing umodes
+        int argIndex = 2;       // Parameters to modes start at index 2
         
         for (char c: args[1].toCharArray()) {
             
@@ -350,15 +345,14 @@ public class ClientCommandParser {
                 adding = false;
             } else {
                 
-                Mode.handleModeChange(c, client, client, adding, args);
+                argIndex = Mode.handleModeChange(c, client, client, adding, args, argIndex);
             }
         }
-        
     }
     
     private static void onStopCommand(Client client, String[] args) {
 
-        if (client.hasFlag('o')) {
+        if (client.hasFlag(Mode.UMODE_OPER)) {
 
             String reason = "No reason given";
             if (args.length > 0) {
@@ -384,6 +378,7 @@ public class ClientCommandParser {
                                                                          "<channel> [password]"));
         
         Channel channel = SharedData.getChannel(args[0]);
+        
         if (channel == null) {
             channel = new Channel(SharedData.toLowerCase(args[0]));
             SharedData.addChannel(channel);
@@ -405,8 +400,7 @@ public class ClientCommandParser {
             return;
         }
         
-        String channel = SharedData.toLowerCase(args[0]);
-        
+        String channel = args[0];
         if (!client.isInChannel(channel)) {
             
             client.sendStandardFormat(Reply.ERR_NOTONCHANNEL.format(client.getNickname(), args[0]));
@@ -429,22 +423,7 @@ public class ClientCommandParser {
         client.sendStandardFormat(Reply.ERR_UNKNOWNCOMMAND.format(client.getSafeNickname(), command));
     }
     
-    private static void onUserModeCommand(Client client, String[] args) {
-        
-        // TODO Move mode command
-    }
-    
-    private static void onChannelModeCommand(Client client, String target, String[] args) {
-        
-        Channel channel = SharedData.getChannel(target);
-        
-        if (channel == null || client.isInChannel(target)) {
-            
-            client.send(Reply.ERR_NOTONCHANNEL.format(target));
-            return;
-        }
-    }
-    
+  
     
     private static boolean isNameBlacklisted(String name) {
         
