@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Set;
 import net.boreeas.frozenircd.utils.GenericSoftReference;
 import net.boreeas.frozenircd.utils.HashUtils;
+import net.boreeas.frozenircd.utils.PatternMatcher;
 
 /**
  *
@@ -280,7 +281,12 @@ public class ConfigData {
      */
     public static String[] getConfigOption(ConfigKey key) {
         
-        return getConfigOption(key.getKey());
+        String[] options = getConfigOption(key.getKey());
+        
+        // Added constraint: ConfigKey options must not return null
+        if (options == null) throw new IncompleteConfigurationException(key.toString() + " (" + key.getKey() + ")");
+        
+        return options;
     }
     
     public static String getFirstConfigOption(String key) {
@@ -368,7 +374,7 @@ public class ConfigData {
         
         for (String line: lineSet) {
             
-            if (host.matches(line.replace(".", "\\.").replace('?', '.'))) {
+            if (PatternMatcher.match(line, host)) {
                 return true;
             }
         }

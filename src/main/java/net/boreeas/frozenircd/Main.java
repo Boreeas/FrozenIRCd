@@ -29,6 +29,7 @@ public final class Main {
                 ConfigData.getConfigOption(configkey);
             } catch (IncompleteConfigurationException ice) {
                 SharedData.logger.error(String.format("Missing configuration: %s", ice.getMessage()));
+                return;
             }
         }
         

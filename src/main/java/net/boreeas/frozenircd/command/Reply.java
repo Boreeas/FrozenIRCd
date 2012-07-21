@@ -126,7 +126,7 @@ public enum Reply {
      * Sent if a command by a client was not recognized.<br />
      * Parameters: nick, command
      */
-    ERR_UNKNOWNCOMMAND      ("421 %s :%s: Unknown command", 2),
+    ERR_UNKNOWNCOMMAND      ("421 %s %s :Unknown command", 2),
     
     /**
      * Sent whenever a command expects a nickname as a parameter but is not given any.<br />
@@ -138,7 +138,7 @@ public enum Reply {
      * Sent when a NICK command fails for a general reason.<br />
      * Parameters: nick, target nick, reason
      */
-    ERR_ERRONEUSNICKNAME    ("432 %s :%s: Illegal nickname: %s", 3),
+    ERR_ERRONEUSNICKNAME    ("432 %s %s :Illegal nickname: %s", 3),
     
     /**
      * Sent when a NICK command fails because the target nick is already in use.<br />
@@ -157,7 +157,7 @@ public enum Reply {
      * Sent when a command expects more parameters than were given by the client.<br />
      * Parameters: nick, command, expected parameters
      */
-    ERR_NEEDMOREPARAMS      ("461 %s :%s: Not enough parameters. Parameters: %s", 3),
+    ERR_NEEDMOREPARAMS      ("461 %s %s :Not enough parameters. Parameters: %s", 3),
     
     /**
      * Sent when a client attempts to re-register a connection, i.e. sending one
