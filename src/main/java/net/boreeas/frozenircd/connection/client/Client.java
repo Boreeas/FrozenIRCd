@@ -21,7 +21,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import net.boreeas.frozenircd.Channel;
 import net.boreeas.frozenircd.Flagable;
@@ -31,8 +33,7 @@ import net.boreeas.frozenircd.config.ConfigKey;
 import net.boreeas.frozenircd.command.Reply;
 import net.boreeas.frozenircd.utils.SharedData;
 import net.boreeas.frozenircd.connection.Connection;
-import net.boreeas.frozenircd.connection.service.Service;
-import net.boreeas.frozenircd.connection.service.ServiceCommandHandler;
+import net.boreeas.frozenircd.utils.StringUtils;
 
 /**
  *
@@ -48,7 +49,7 @@ public class Client extends Connection implements Flagable {
     private boolean passGiven = false;
     private boolean welcomeSent = false; 
             
-    private Set<Character> flags = new HashSet<>();
+    private Map<Character, String> flags = new HashMap<>();
     
     private String username;
     private String realname;
@@ -83,7 +84,7 @@ public class Client extends Connection implements Flagable {
         
         try {
             
-            SharedData.logger.trace(String.format("[-> %s] %s", socket.getInetAddress(), line));
+            SharedData.logger.debug("[← " + this + "] " + line);
             writer.write(String.format("%s\r\n", line));
             writer.flush();
         } catch (IOException ioe) {
@@ -273,29 +274,35 @@ public class Client extends Connection implements Flagable {
     @Override
     public void onInput(String input) {
         
-        SharedData.logger.trace(String.format("[%s ->] %s", this, input));
+        SharedData.logger.debug(String.format("[→ " + this + "] " + input));
         
         
         String[] fields = input.split(" ", 2);
+        String[] args;
         
-        // For "x y :z" contains ["x y ", "z"]. For "" contains []. For "x y" contains ["x y"]
-        String[] toLastArg = ( fields.length > 1 ) 
-                                    ? fields[1].split(":") 
-                                    : new String[0];
+        if (fields.length >= 2 && fields[1].trim().startsWith(":")) {
+            args = new String[] { fields[1].trim().substring(1) };
+        } else {
 
-        // For "x y :z" contains ["x", "y"]. For "" contains []. For "x y" contains ["x", "y"]
-        String[] otherArgs = ( toLastArg.length > 0 ) 
-                                    ? toLastArg[0].trim().split(" ") 
-                                    : new String[0];
+            // For "x y :z" yields ["x y ", "z"]. For "" yields []. For "x y" yields ["x y"]
+            String[] toLastArg = ( fields.length > 1 ) 
+                                        ? fields[1].split(":") 
+                                        : new String[0];
 
-        String[] argsTotal = new String[otherArgs.length + (( toLastArg.length > 1 ) ? 1 : 0 )];
+            // For "x y :z" yields ["x", "y"]. For "" yields []. For "x y" yields ["x", "y"]
+            String[] otherArgs = ( toLastArg.length > 0 ) 
+                                        ? toLastArg[0].trim().split(" ") 
+                                        : new String[0];
 
-        System.arraycopy(otherArgs, 0, argsTotal, 0, otherArgs.length);
-        if (toLastArg.length > 1) {
-            argsTotal[argsTotal.length - 1] = toLastArg[1];
+            args = new String[otherArgs.length + (( toLastArg.length > 1 ) ? 1 : 0 )];
+
+            System.arraycopy(otherArgs, 0, args, 0, otherArgs.length);
+            if (toLastArg.length > 1) {
+                args[args.length - 1] = toLastArg[1];
+            }
         }
-        
-        SharedData.onClientCommand(this, fields[0], argsTotal);
+    
+        SharedData.onClientCommand(this, fields[0], args);
     }
 
     @Override
@@ -313,7 +320,7 @@ public class Client extends Connection implements Flagable {
         
         welcomeSent = true;
         
-        addFlag(Mode.UMODE_INVISIBLE);
+        addFlag(Mode.UMODE_INVISIBLE, null);
         
         sendStandardFormat(Reply.RPL_WELCOME.format(nickname, getHostmask()));
         sendStandardFormat(Reply.RPL_YOURHOST.format(nickname));
@@ -388,24 +395,13 @@ public class Client extends Connection implements Flagable {
     
     public boolean hasFlag(char flag) {
         
-        return flags.contains(flag);
+        return flags.containsKey(flag);
     }
     
     
-    public void addFlag(char flag) {
+    public void addFlag(char flag, String mode) {
                 
-        flags.add(flag);
-        onModeChange();
-    }
-    
-    
-    public void addFlags(String flagString) {
-        
-        for (char flag: flagString.toCharArray()) {
-            
-           flags.add(flag);
-        }
-        
+        flags.put(flag, mode);
         onModeChange();
     }
     
@@ -417,27 +413,26 @@ public class Client extends Connection implements Flagable {
     }
     
     
-    public void removeFlags(String flagString) {
+    public String flags() {
         
-        // TODO sanity check in CommandParser
-        for (char flag: flagString.toCharArray()) {
-            
-            flags.remove(flag);
-        }
-        
-        onModeChange();
+        return StringUtils.joinIterable(flags.keySet(), "");
     }
     
-    
-    public String flags() {
+    public String flagParams() {
         
         StringBuilder builder = new StringBuilder();
         
-        for (Character character: flags) {
-            
-            builder.append(character);
+        for (String param: flags.values()) {
+            if (param != null) {
+                builder.append(" ").append(param);
+            }
         }
         
         return builder.toString();
+    }
+    
+    public String getParam(char flag) {
+        
+        return flags.get(flag);
     }
 }

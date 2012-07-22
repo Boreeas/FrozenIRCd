@@ -68,6 +68,11 @@ public class Mode {
                 return argIndex;
             }
             
+            if (mode == NO_FLAG) user.sendStandardFormat(Reply.RPL_CHANNELMODEIS.format(user.getNickname(), 
+                                                                                        chan.getName(),
+                                                                                        chan.flags(),
+                                                                                        chan.flagParams()));
+            
         } else {
             
             SharedData.logger.error("Unhandled Mode Target '" + target + "' at:");
@@ -93,7 +98,7 @@ public class Mode {
     private static void processUmodeInvisible(Flagable target, boolean adding) {
         
         if (adding) {
-            target.addFlag(UMODE_INVISIBLE);
+            target.addFlag(UMODE_INVISIBLE, null);
         } else {
             target.removeFlag(UMODE_INVISIBLE);
         }

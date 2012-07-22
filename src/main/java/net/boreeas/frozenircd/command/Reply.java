@@ -67,6 +67,12 @@ public enum Reply {
     RPL_UMODEIS             ("221 %s :+%s", 2),
     
     /**
+     * Sent to inform the client of the mode flags set for a channel.<br />
+     * Parameters: nick, channel name, flags, flag params
+     */
+    RPL_CHANNELMODEIS       ("324 %s %s +%s %s", 4),
+    
+    /**
      * Sent on a TOPIC if no topic has been set.<br />
      * Parameters: nick, channel
      */

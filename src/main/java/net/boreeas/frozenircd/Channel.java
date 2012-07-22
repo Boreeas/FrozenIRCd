@@ -24,6 +24,7 @@ import net.boreeas.frozenircd.command.Reply;
 import net.boreeas.frozenircd.connection.BroadcastFilter;
 import net.boreeas.frozenircd.connection.client.Client;
 import net.boreeas.frozenircd.utils.SharedData;
+import net.boreeas.frozenircd.utils.StringUtils;
 
 /**
  *
@@ -49,7 +50,7 @@ public class Channel implements Flagable {
     /**
      * The set channel modes.
      */
-    private final Set<Character> channelmodes = new HashSet<>();
+    private final Map<Character, String> channelmodes = new HashMap<>();
     
     /**
      * The access list for the channel.
@@ -141,31 +142,43 @@ public class Channel implements Flagable {
 
     @Override
     public String flags() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public void removeFlags(String flagString) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        
+        return StringUtils.joinIterable(channelmodes.keySet(), "");
     }
 
     @Override
     public void removeFlag(char flag) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        
+        channelmodes.remove(flag);
     }
 
     @Override
-    public void addFlags(String flagString) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
-    @Override
-    public void addFlag(char flag) {
-        throw new UnsupportedOperationException("Not supported yet.");
+    public void addFlag(char flag, String param) {
+        
+        channelmodes.put(flag, param);
     }
 
     @Override
     public boolean hasFlag(char flag) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        
+        return channelmodes.containsKey(flag);
+    }
+
+    @Override
+    public String flagParams() {
+        
+        StringBuilder builder = new StringBuilder();
+        
+        for (String param: channelmodes.values()) {
+            if (param != null) builder.append(param);
+        }
+        
+        return builder.toString();
+    }
+
+    @Override
+    public String getParam(char flag) {
+        
+        return channelmodes.get(flag);
     }
 }

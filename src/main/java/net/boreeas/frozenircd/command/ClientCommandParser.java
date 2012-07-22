@@ -20,6 +20,7 @@ import net.boreeas.frozenircd.Channel;
 import net.boreeas.frozenircd.Server;
 import net.boreeas.frozenircd.config.IncompleteConfigurationException;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 import net.boreeas.frozenircd.utils.HashUtils;
 import net.boreeas.frozenircd.utils.StringUtils;
 import net.boreeas.frozenircd.connection.Connection;
@@ -126,6 +127,7 @@ public class ClientCommandParser {
             return;
         }
 
+        SharedData.logger.error("Received PONG: " + Arrays.toString(args));
         client.updatePing(args[0]);
     }
     
@@ -298,7 +300,7 @@ public class ClientCommandParser {
         }
 
         client.sendStandardFormat(Reply.RPL_YOUREOPER.format(client.getSafeNickname()));
-        client.addFlag(Mode.UMODE_OPER);
+        client.addFlag(Mode.UMODE_OPER, null);
     }
     
     private static void onModeCommand(Client client, String[] args) {
@@ -328,7 +330,7 @@ public class ClientCommandParser {
 
         if (args.length == 1) {
             // Ignore mode requests for channels
-            Mode.handleModeChange(Mode.NO_FLAG, client, client, true, args, 0);
+            Mode.handleModeChange(Mode.NO_FLAG, client, target, true, args, 0);
             return;
         }
 

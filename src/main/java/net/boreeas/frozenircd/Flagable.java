@@ -28,10 +28,10 @@ public interface Flagable {
     public String flags();
     
     /**
-     * Removes all flags in <code>flagString</code>.
-     * @param flagString The flags to remove
+     * Returns the mode params string for this Flagable
+     * @return The mode params string
      */
-    public void removeFlags(String flagString);
+    public String flagParams();
     
     /**
      * Removes the given flag.
@@ -39,19 +39,11 @@ public interface Flagable {
      */
     public void removeFlag(char flag);
     
-    
-    /**
-     * Sets all chars in the string.
-     * @param flagString The flags to set
-     */
-    public void addFlags(String flagString);
-    
     /**
      * Sets the given flag.
      * @param flag The flag to set
      */
-    public void addFlag(char flag);
-    
+    public void addFlag(char flag, String params);
     
     /**
      * Tells whether this Flagable has a certain flag
@@ -59,4 +51,12 @@ public interface Flagable {
      * @return <code>true</code> if the Flagable has the flag <code>flag</code>, false otherwise
      */
     public boolean hasFlag(char flag);
+    
+    /**
+     * Returns the parameter set for the given flag.
+     * Returns null if the flag takes no parameter
+     * or the flag was not set.
+     * @return The parameter for the flag.
+     */
+    public String getParam(char flag);
 }
