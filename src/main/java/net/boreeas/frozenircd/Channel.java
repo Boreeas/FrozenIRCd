@@ -32,6 +32,10 @@ import net.boreeas.frozenircd.utils.StringUtils;
  */
 public class Channel implements Flagable {
     
+    private static final char DISPLAY_VOICE  = '+';
+    private static final char DISPLAY_OP     = '@';
+    
+    
     /**
      * The name for the channel.
      */
@@ -52,10 +56,10 @@ public class Channel implements Flagable {
      */
     private final Map<Character, String> channelmodes = new HashMap<>();
     
-    /**
-     * The access list for the channel.
-     */
-    private final Map<String, Set<Character>> accessList = new HashMap<>();
+    private final Set<Client> ops = new HashSet<>();
+    private final Set<Client> voices = new HashSet<>();
+    private final Set<Client> muted = new HashSet<>();
+    private final Set<Client> banned = new HashSet<>();
     
     /**
      * The clients that have currently joined the room.
@@ -180,5 +184,80 @@ public class Channel implements Flagable {
     public String getParam(char flag) {
         
         return channelmodes.get(flag);
+    }
+    
+    
+    
+    
+    /**
+     * Returns the reply to the NAMES request
+     * @return the names of the people in the channel
+     */
+    public String names() {
+        
+        StringBuilder builder = new StringBuilder();
+        
+        for (Client client: clients) {
+            
+            if (builder.length() > 0) builder.append(' ');
+            
+            if (isOp(client))     builder.append(DISPLAY_OP);
+            if (isVoiced(client)) builder.append(DISPLAY_VOICE);
+            
+            builder.append(client.getNickname());
+        }
+        
+        return builder.toString();
+    }
+    
+            
+            
+    
+    public boolean isOp(Client client) {
+        return ops.contains(client);
+    }
+    
+    public boolean isVoiced(Client client) {
+        return voices.contains(client);
+    }
+    
+    public boolean isMuted(Client client) {
+        return muted.contains(client);
+    }
+    
+    public boolean isBanned(Client client) {
+        return banned.contains(client);
+    }
+    
+    public void op(Client client) {
+        ops.add(client);
+    }
+    
+    public void deop(Client client) {
+        ops.remove(client);
+    }
+    
+    public void voice(Client client) {
+        voices.add(client);
+    }
+    
+    public void devoice(Client client) {
+        voices.remove(client);
+    }
+    
+    public void mute(Client client) {
+        muted.add(client);
+    }
+    
+    public void unmute(Client client) {
+        muted.remove(client);
+    }
+    
+    public void ban(Client client) {
+        banned.add(client);
+    }
+    
+    public void unban(Client client) {
+        banned.remove(client);
     }
 }
