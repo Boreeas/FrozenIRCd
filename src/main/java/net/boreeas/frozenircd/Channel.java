@@ -20,6 +20,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import net.boreeas.frozenircd.command.Command;
+import net.boreeas.frozenircd.command.Mode;
 import net.boreeas.frozenircd.command.Reply;
 import net.boreeas.frozenircd.connection.BroadcastFilter;
 import net.boreeas.frozenircd.connection.client.Client;
@@ -31,6 +32,8 @@ import net.boreeas.frozenircd.utils.StringUtils;
  * @author Boreeas
  */
 public class Channel implements Flagable {
+    
+    public static final String NO_TOPIC = "";
     
     private static final char DISPLAY_VOICE  = '+';
     private static final char DISPLAY_OP     = '@';
@@ -66,6 +69,10 @@ public class Channel implements Flagable {
      */
     private final Set<Client> clients = new HashSet<>();
     
+    // Thread locks
+    private final Object clientLock = new Object();
+    private final Object modeLock = new Object();
+    
     /**
      * Creates a new channel with given name.
      * @param name The name of the channel
@@ -75,18 +82,18 @@ public class Channel implements Flagable {
         this.name = name;
     }
     
-    /**
-     * Sends a reply to all clients, formatted with the given args.
-     * @param reply The reply to send
-     * @param args The args for the reply
-     */
-    public void sendToAll(final Reply reply, final Object... args) {
+    public void sendToAll(Reply reply, Object... args) {
         
-        final String formattedReply = reply.format(args);
+        // Reserver first for client's nickname
+        Object[] actualArgs = new Object[args.length + 1];
+        System.arraycopy(args, 0, actualArgs, 1, args.length);
         
-        for (final Client client: clients) {
-            
-            client.sendStandardFormat(formattedReply);
+        synchronized (clientLock) {
+            for (Client client: clients) {
+                
+                actualArgs[0] = client.getNickname();
+                client.sendStandardFormat(reply.format(actualArgs));
+            }
         }
     }
     
@@ -110,56 +117,84 @@ public class Channel implements Flagable {
         
         final String actualMessage = ":" + client.getDisplayHostmask() + " " + message;
         
-        for (final Client other: clients) {
-            
-            if (filter.sendToConnection(other)) {
-                
-                other.send(actualMessage);
+        synchronized (clientLock) {
+            for (final Client other: clients) {
+
+                if (filter.sendToConnection(other)) {
+
+                    other.send(actualMessage);
+                }
             }
         }
     }
     
     public void joinChannel(final Client client) {
         
-        clients.add(client);
+        if (isEmpty()) op(client);
+        
+        synchronized (clientLock) {
+            clients.add(client);
+        }
+        
         sendFromClient(client, Command.JOIN.format(this.name));
         
         if (topic != null) {
             client.sendStandardFormat(Reply.RPL_TOPIC.format(client.getSafeNickname(), this.name, this.topic));
         }
         
-        // TODO Check RPL_NAMREPLY format
-        // client.sendStandardFormat(Reply.RPL_NAMREPLY.format);
+        //client.sendStandardFormat(Reply.RPL_NAMREPLY.format(client.getNickname(), '=', name, names()));
     }
     
     public void partChannel(final Client client, String reason) {
      
         sendFromClient(client, Command.PART.format(this.name, reason));
         
-        clients.remove(client);
+        synchronized (clientLock) {
+            clients.remove(client);
+        }
+    }
+    
+    public String getTopic() {
+        return topic;
+    }
+    
+    public void setTopic(String topic) {
+        
+        this.topic = topic;
     }
     
     public String getName() {
      
         return name;
     }
+    
+    public boolean isEmpty() {
+        
+        return clients.isEmpty();
+    }
 
     @Override
     public String flags() {
         
-        return StringUtils.joinIterable(channelmodes.keySet(), "");
+        synchronized (modeLock) {
+            return StringUtils.joinIterable(channelmodes.keySet(), "");
+        }
     }
 
     @Override
     public void removeFlag(char flag) {
         
-        channelmodes.remove(flag);
+        synchronized (modeLock) {
+            channelmodes.remove(flag);
+        }
     }
 
     @Override
     public void addFlag(char flag, String param) {
         
-        channelmodes.put(flag, param);
+        synchronized (modeLock) {
+            channelmodes.put(flag, param);
+        }
     }
 
     @Override
@@ -173,8 +208,10 @@ public class Channel implements Flagable {
         
         StringBuilder builder = new StringBuilder();
         
-        for (String param: channelmodes.values()) {
-            if (param != null) builder.append(param);
+        synchronized (modeLock) {
+            for (String param: channelmodes.values()) {
+                if (param != null) builder.append(param);
+            }
         }
         
         return builder.toString();
@@ -197,19 +234,45 @@ public class Channel implements Flagable {
         
         StringBuilder builder = new StringBuilder();
         
-        for (Client client: clients) {
-            
-            if (builder.length() > 0) builder.append(' ');
-            
-            if (isOp(client))     builder.append(DISPLAY_OP);
-            if (isVoiced(client)) builder.append(DISPLAY_VOICE);
-            
-            builder.append(client.getNickname());
+        synchronized (clientLock) {
+            for (Client client: clients) {
+
+                if (builder.length() > 0) builder.append(' ');
+
+                if (isOp(client))          builder.append(DISPLAY_OP);
+                else if (isVoiced(client)) builder.append(DISPLAY_VOICE);
+
+                builder.append(client.getNickname());
+            }
         }
         
         return builder.toString();
     }
     
+    /**
+     * Returns the reply to the NAMES request for users outside the channel
+     * @return the names of the users without Mode.UMODE_INVISIBLE
+     */
+    public String visibleNames() {
+        
+        StringBuilder builder = new StringBuilder();
+        
+        synchronized (clientLock) {
+            for (Client client: clients) {
+                if (!client.hasFlag(Mode.UMODE_INVISIBLE)) {
+                    
+                    if (builder.length() > 0) builder.append(' ');
+                    
+                    if (isOp(client))          builder.append(DISPLAY_OP);
+                    else if (isVoiced(client)) builder.append(DISPLAY_VOICE);
+                    
+                    builder.append(client.getNickname());
+                }
+            }
+        }
+        
+        return builder.toString();
+    }
             
             
     

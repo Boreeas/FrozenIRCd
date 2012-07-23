@@ -133,6 +133,11 @@ public class SharedData {
     public static final boolean operCanSetModes = getFirstConfigOption(OPER_CANSETMODE).equalsIgnoreCase("true");
     
     /**
+     * Determines whether opers can message channels they are not in
+     */
+    public static final boolean operCanMsgChan = getFirstConfigOption(OPER_CANMSGCHAN).equalsIgnoreCase("true");
+    
+    /**
      * The pattern that nicknames must adhere to
      */
     public static final Pattern nickPattern = Pattern.compile(getConfigOption(NICK_PATTERN)[0]);

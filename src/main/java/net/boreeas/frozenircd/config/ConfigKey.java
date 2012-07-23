@@ -48,8 +48,11 @@ public enum ConfigKey {
     SERVICE_PASS        ("password.service"),
     USER_PASS           ("password.user"),
     
-    // Can an oper set another users or channels mode?
-    OPER_CANSETMODE     ("oper.setmode");
+    // Can an oper set another user's or channel's mode?
+    OPER_CANSETMODE     ("oper.setmode"),
+    
+    // Can an oper message a channel he's not part of?
+    OPER_CANMSGCHAN     ("oper.msgchan");
     
     
     private String key;

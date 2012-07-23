@@ -284,16 +284,23 @@ public class Client extends Connection implements Flagable {
             args = new String[] { fields[1].trim().substring(1) };
         } else {
 
-            // For "x y :z" yields ["x y ", "z"]. For "" yields []. For "x y" yields ["x y"]
-            String[] toLastArg = ( fields.length > 1 ) 
-                                        ? fields[1].split(":") 
-                                        : new String[0];
+            String[] toLastArg = new String[0];
+            
+            if (fields.length > 1) {
+            
+                toLastArg = fields[1].split(":", 2);    // Split off the last arg (prefixed with ':')
+                
+                if (toLastArg.length == 1) {
+                    toLastArg = new String[] { toLastArg[0], "" };  // String.split removes empty strings - put them back in
+                }
+            }
 
             // For "x y :z" yields ["x", "y"]. For "" yields []. For "x y" yields ["x", "y"]
-            String[] otherArgs = ( toLastArg.length > 0 ) 
-                                        ? toLastArg[0].trim().split(" ") 
-                                        : new String[0];
+            String[] otherArgs = ( toLastArg.length > 0 )           // If we got any args at all
+                                        ? toLastArg[0].split(" ")   // Split the first ones by whitespace
+                                        : new String[0];            // Else no args
 
+            // Merge together
             args = new String[otherArgs.length + (( toLastArg.length > 1 ) ? 1 : 0 )];
 
             System.arraycopy(otherArgs, 0, args, 0, otherArgs.length);

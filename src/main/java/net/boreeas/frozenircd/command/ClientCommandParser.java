@@ -47,6 +47,9 @@ public class ClientCommandParser {
     public static final String STOP = "STOP";
     public static final String JOIN = "JOIN";
     public static final String PART = "PART";
+    public static final String TOPIC = "TOPIC";
+    public static final String NAMES = "NAMES";
+    public static final String PRIVMSG = "PRIVMSG";
     
     
     public static void parseClientCommand(String command, Client client, String[] args) {
@@ -99,7 +102,19 @@ public class ClientCommandParser {
             case PART:
                 onPartCommand(client, args);
                 break;
+                
+            case TOPIC:
+                onTopicCommand(client, args);
+                break;
             
+            case PRIVMSG:
+                onPrivmsgCommand(client, args);
+                break;
+                
+            case NAMES:
+                onNamesCommand(client, args);
+                break;
+                
             default:
                 onUnknownCommand(client, command);
                 break;
@@ -127,7 +142,6 @@ public class ClientCommandParser {
             return;
         }
 
-        SharedData.logger.error("Received PONG: " + Arrays.toString(args));
         client.updatePing(args[0]);
     }
     
@@ -212,6 +226,8 @@ public class ClientCommandParser {
                 args[0] = args[0].substring(0, SharedData.maxNickLength);
             }
             
+            
+            client.broadcastToChannels("NICK :" + args[0]);
             client.setNickname(args[0]);
         }
         
@@ -417,6 +433,71 @@ public class ClientCommandParser {
         
         client.removeChannel(channel);
         SharedData.getChannel(channel).partChannel(client, reason);
+    }
+    
+    private static void onTopicCommand(Client client, String[] args) {
+        
+        if (!client.registrationCompleted()) return;
+        
+        if (args.length < 1) {
+            client.sendStandardFormat(ERR_NEEDMOREPARAMS.format(client.getNickname(), "<channel> [topic]"));
+            return;
+        }
+        
+        Channel chan = SharedData.getChannel(args[0]);
+        
+        if (args.length < 2) {
+            
+            String topic = chan.getTopic();
+            
+            if (topic == null) {
+                client.sendStandardFormat(Reply.RPL_NOTOPIC.format(client.getNickname(), args[0]));
+            } else {
+                client.sendStandardFormat(Reply.RPL_TOPIC.format(client.getNickname(), args[0], topic));
+            }
+        } else if (!chan.isOp(client)) {
+            
+            client.sendStandardFormat(Reply.ERR_CHANOPRIVSNEEDED.format(client.getNickname(), args[0]));
+            return;
+        } else if (!client.isInChannel(args[0])) {
+            
+            client.sendStandardFormat(Reply.ERR_NOTONCHANNEL.format(client.getNickname(), args[0]));
+            return;
+        } else {
+            
+            String topic = args[1].trim();
+            if (topic.isEmpty()) topic = null;
+            
+            chan.setTopic(topic);
+            chan.sendFromClient(client, TOPIC + " " + args[0] + " :" + args[1]);
+        }
+    }
+    
+    private static void onPrivmsgCommand(Client client, String[] args) {
+        
+        if (!client.registrationCompleted()) return;
+        
+        if (args.length < 2 || args[1].isEmpty()) {
+            client.sendStandardFormat(Reply.ERR_NEEDMOREPARAMS.format(client.getNickname(), "<target> <message>"));
+        }
+        
+        a
+    }
+    
+    private static void onNamesCommand(Client client, String[] args) {
+        
+        if (!client.registrationCompleted()) return;
+        
+        if (args.length == 0) {
+            for (;;);
+        } else {
+            Channel chan = SharedData.getChannel(args[0]);
+            if (chan == null) return;
+            
+            String names = (client.isInChannel(args[0])) ? chan.names() : chan.visibleNames();
+            
+            client.sendStandardFormat(Reply.RPL_NAMREPLY.format(client.getNickname(), '=', chan.getName(), names));
+        }
     }
     
     

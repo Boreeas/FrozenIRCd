@@ -150,7 +150,7 @@ public enum Reply {
      * Sent when a NICK command fails because the target nick is already in use.<br />
      * Parameters: nick, target nick
      */
-    ERR_NICKNAMEINUSE       ("433 %s :Nickname already in use: %s", 2),
+    ERR_NICKNAMEINUSE       ("433 %s :%s", 2),
     
     
     /**
@@ -189,6 +189,13 @@ public enum Reply {
      * Parameters: nick
      */
     ERR_NOPRIVILEGES        ("481 %s :Oper status is needed", 1),
+    
+    /**
+     * Sent when a user tries to execute a command without sufficient
+     * channel access.<br />
+     * Parameters: nick, channel
+     */
+    ERR_CHANOPRIVSNEEDED    ("482 %s %s :Need to be a channel operator", 2),
     
     /**
      * Sent when a client whose host does not match any o-line attempts to use the OPER command.<br />
