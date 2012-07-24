@@ -15,22 +15,15 @@
  */
 package net.boreeas.frozenircd.utils;
 
-import net.boreeas.frozenircd.Channel;
 import java.io.IOException;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.io.File;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
 import java.util.regex.Pattern;
 import net.boreeas.frozenircd.command.ClientCommandParser;
 import net.boreeas.frozenircd.command.Reply;
-import net.boreeas.frozenircd.connection.BroadcastFilter;
 import net.boreeas.frozenircd.connection.Connection;
 import net.boreeas.frozenircd.connection.ConnectionPool;
 import net.boreeas.frozenircd.connection.client.Client;
@@ -116,10 +109,6 @@ public class SharedData {
      */
     public static final ConnectionPool linkPool = new ConnectionPool();
     
-    /**
-     * All channels
-     */
-    private static final Map<String, Channel> channels = new HashMap<>();
     
  
     /**
@@ -155,10 +144,10 @@ public class SharedData {
     /**
      * This filter returns true for all connections
      */
-    public static final BroadcastFilter emptyBroadcastFilter = new BroadcastFilter() {
+    public static final Filter passAllFilter = new Filter() {
 
         @Override
-        public boolean sendToConnection(Connection connection) {
+        public boolean pass(Object o) {
             return true;
         }
     };
@@ -232,25 +221,7 @@ public class SharedData {
         return new String(oldChars, 0, newLen);
     }
     
-    public static boolean isChanTypeSupported(char chantype) {
-        
-        return chantype == '#';
-    }
     
-    public static Channel getChannel(String name) {
-        
-        return channels.get(toLowerCase(name));
-    }
-    
-    public static void addChannel(Channel channel) {
-        
-        channels.put(toLowerCase(channel.getName()), channel);
-    }
-    
-    public static void removeChannel(String name) {
-        
-        channels.remove(toLowerCase(name));
-    }
     
     
     /**

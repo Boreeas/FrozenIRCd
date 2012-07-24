@@ -15,10 +15,12 @@
  */
 package net.boreeas.frozenircd.connection;
 
-import java.util.Collection;
+import net.boreeas.frozenircd.utils.Filter;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.UUID;
 import net.boreeas.frozenircd.config.ConfigData;
 import net.boreeas.frozenircd.config.ConfigKey;
@@ -84,18 +86,18 @@ public class ConnectionPool {
         }
     }
     
-    public void broadcast(String message, BroadcastFilter filter) {
+    public void broadcast(String message, Filter<Connection> filter) {
         
         for (Entry<UUID, Connection> entry: pool.entrySet()) {
             
-            if (filter.sendToConnection(entry.getValue())) {
+            if (filter.pass(entry.getValue())) {
                 
                 entry.getValue().send(message);
             }
         }
     }
     
-    public void notifyClients(String message) {
+    public synchronized void notifyClients(String message) {
         
         for (Entry<UUID, Connection> entry: pool.entrySet()) {
             
@@ -110,7 +112,7 @@ public class ConnectionPool {
     /**
      * Disconnects all connections in this pool.
      */
-    public void disconnectAll() {
+    public synchronized void disconnectAll() {
         
         for (Entry<UUID, Connection> entry: pool.entrySet()) {
             
@@ -118,8 +120,15 @@ public class ConnectionPool {
         }
     }
     
-    public Collection<Connection> getConnections() {
+    public synchronized Set<Connection> getConnections(Filter<Connection> filter) {
         
-        return pool.values();
+        Set<Connection> results = new HashSet<Connection>();
+        
+        for (Connection conn: pool.values()) {
+            
+            if (filter.pass(conn)) results.add(conn);
+        }
+        
+        return results;
     }
 }

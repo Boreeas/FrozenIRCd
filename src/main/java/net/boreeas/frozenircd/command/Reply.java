@@ -91,6 +91,12 @@ public enum Reply {
     RPL_NAMREPLY            ("353 %s %s %s :%s", 4),
     
     /**
+     * Sent to indicate the end of a NAMES listing.<br />
+     * Parameters: nick, channel
+     */
+    RPL_ENDOFNAMES          ("366 %s %s: End of NAMES", 2),
+    
+    /**
      * Sent when a completes registration containing the MOTD of the server.<br />
      * Parameters: nick, (part of the) MOTD
      */

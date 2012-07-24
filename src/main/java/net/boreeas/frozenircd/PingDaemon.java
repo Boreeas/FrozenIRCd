@@ -42,7 +42,7 @@ public class PingDaemon extends Thread {
 
         while (true) {
             
-            for (Connection connection : SharedData.connectionPool.getConnections()) {
+            for (Connection connection : SharedData.connectionPool.getConnections(SharedData.passAllFilter)) {
 
                 // Disconnect if ping request sent
                 if (connection.getPingRequestText() != null) {

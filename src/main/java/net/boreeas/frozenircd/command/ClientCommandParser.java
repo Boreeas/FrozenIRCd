@@ -15,12 +15,13 @@
  */
 package net.boreeas.frozenircd.command;
 
+import java.util.Set;
+import net.boreeas.frozenircd.ChannelPool;
 import net.boreeas.frozenircd.Flagable;
 import net.boreeas.frozenircd.Channel;
 import net.boreeas.frozenircd.Server;
 import net.boreeas.frozenircd.config.IncompleteConfigurationException;
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
 import net.boreeas.frozenircd.utils.HashUtils;
 import net.boreeas.frozenircd.utils.StringUtils;
 import net.boreeas.frozenircd.connection.Connection;
@@ -334,9 +335,9 @@ public class ClientCommandParser {
         Flagable target = client;
         
         // Check if the target is a channel
-        if (SharedData.isChanTypeSupported(args[0].charAt(0))) {
+        if (Channel.isChanTypeSupported(args[0].charAt(0))) {
             
-            target = SharedData.getChannel(args[0]);
+            target = ChannelPool.getChannel(args[0]);
             
             if (target == null) {
                 client.sendStandardFormat(ERR_NOSUCHCHANNEL.format(client.getNickname(), args[0]));
@@ -395,11 +396,11 @@ public class ClientCommandParser {
                                                                          JOIN, 
                                                                          "<channel> [password]"));
         
-        Channel channel = SharedData.getChannel(args[0]);
+        Channel channel = ChannelPool.getChannel(args[0]);
         
         if (channel == null) {
             channel = new Channel(SharedData.toLowerCase(args[0]));
-            SharedData.addChannel(channel);
+            ChannelPool.addChannel(channel);
         }
         
         channel.joinChannel(client);
@@ -432,7 +433,7 @@ public class ClientCommandParser {
         }
         
         client.removeChannel(channel);
-        SharedData.getChannel(channel).partChannel(client, reason);
+        ChannelPool.getChannel(channel).partChannel(client, reason);
     }
     
     private static void onTopicCommand(Client client, String[] args) {
@@ -444,7 +445,7 @@ public class ClientCommandParser {
             return;
         }
         
-        Channel chan = SharedData.getChannel(args[0]);
+        Channel chan = ChannelPool.getChannel(args[0]);
         
         if (args.length < 2) {
             
@@ -481,7 +482,7 @@ public class ClientCommandParser {
             client.sendStandardFormat(Reply.ERR_NEEDMOREPARAMS.format(client.getNickname(), "<target> <message>"));
         }
         
-        a
+        
     }
     
     private static void onNamesCommand(Client client, String[] args) {
@@ -489,14 +490,25 @@ public class ClientCommandParser {
         if (!client.registrationCompleted()) return;
         
         if (args.length == 0) {
-            for (;;);
+            
+            Set<Channel> results = ChannelPool.select(SharedData.passAllFilter);
+            for (Channel chan: results) {
+                
+                String names = (client.isInChannel(args[0])) ? chan.names() : chan.visibleNames();
+                if (names.isEmpty()) continue;
+                
+                client.sendStandardFormat(Reply.RPL_NAMREPLY.format(client.getNickname(), '=', chan.getName(), names));
+            }
+            
         } else {
-            Channel chan = SharedData.getChannel(args[0]);
+            Channel chan = ChannelPool.getChannel(args[0]);
             if (chan == null) return;
             
             String names = (client.isInChannel(args[0])) ? chan.names() : chan.visibleNames();
+            if (names.isEmpty()) return;
             
             client.sendStandardFormat(Reply.RPL_NAMREPLY.format(client.getNickname(), '=', chan.getName(), names));
+            client.sendStandardFormat(Reply.RPL_ENDOFNAMES.format(client.getNickname(), chan.getName()));
         }
     }
     
@@ -522,7 +534,7 @@ public class ClientCommandParser {
     
     private static boolean isNameInUse(Client client, String name) {
         
-        for (Connection conn : SharedData.connectionPool.getConnections()) {
+        for (Connection conn : SharedData.connectionPool.getConnections(SharedData.passAllFilter)) {
 
             if (conn != client && SharedData.stringsEqual(name, conn.getCommonName())) {
                 return true;

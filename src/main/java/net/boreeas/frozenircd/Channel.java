@@ -22,7 +22,8 @@ import java.util.Set;
 import net.boreeas.frozenircd.command.Command;
 import net.boreeas.frozenircd.command.Mode;
 import net.boreeas.frozenircd.command.Reply;
-import net.boreeas.frozenircd.connection.BroadcastFilter;
+import net.boreeas.frozenircd.connection.Connection;
+import net.boreeas.frozenircd.utils.Filter;
 import net.boreeas.frozenircd.connection.client.Client;
 import net.boreeas.frozenircd.utils.SharedData;
 import net.boreeas.frozenircd.utils.StringUtils;
@@ -104,7 +105,7 @@ public class Channel implements Flagable {
      */
     public void sendFromClient(final Client client, final String message) {
         
-        sendFromClient(client, message, SharedData.emptyBroadcastFilter);
+        sendFromClient(client, message, SharedData.passAllFilter);
     }
     
     /**
@@ -113,14 +114,14 @@ public class Channel implements Flagable {
      * @param message The message to send
      * @param filter The filter to determine which clients receive the message
      */
-    public void sendFromClient(final Client client, final String message, final BroadcastFilter filter) {
+    public void sendFromClient(final Client client, final String message, final Filter<Connection> filter) {
         
         final String actualMessage = ":" + client.getDisplayHostmask() + " " + message;
         
         synchronized (clientLock) {
             for (final Client other: clients) {
 
-                if (filter.sendToConnection(other)) {
+                if (filter.pass(other)) {
 
                     other.send(actualMessage);
                 }
@@ -322,5 +323,11 @@ public class Channel implements Flagable {
     
     public void unban(Client client) {
         banned.remove(client);
+    }
+    
+    
+    public static boolean isChanTypeSupported(char chantype) {
+        
+        return chantype == '#';
     }
 }

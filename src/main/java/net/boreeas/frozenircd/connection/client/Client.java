@@ -26,6 +26,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import net.boreeas.frozenircd.Channel;
+import net.boreeas.frozenircd.ChannelPool;
 import net.boreeas.frozenircd.Flagable;
 import net.boreeas.frozenircd.command.Mode;
 import net.boreeas.frozenircd.config.ConfigData;
@@ -391,7 +392,7 @@ public class Client extends Connection implements Flagable {
         
         for (String channel: channels) {
             
-            Channel chan = SharedData.getChannel(channel);
+            Channel chan = ChannelPool.getChannel(channel);
             chan.sendFromClient(this, message);
         }
     }
