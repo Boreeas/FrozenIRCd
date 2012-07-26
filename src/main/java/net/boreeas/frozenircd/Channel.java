@@ -143,7 +143,11 @@ public class Channel implements Flagable {
             client.sendStandardFormat(Reply.RPL_TOPIC.format(client.getSafeNickname(), this.name, this.topic));
         }
         
-        //client.sendStandardFormat(Reply.RPL_NAMREPLY.format(client.getNickname(), '=', name, names()));
+        client.sendStandardFormat(Reply.RPL_NAMREPLY.format(client.getNickname(), '=', name, names()));
+    }
+    
+    public int size() {
+        return clients.size();
     }
     
     public void partChannel(final Client client, String reason) {

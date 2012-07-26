@@ -15,6 +15,7 @@
  */
 package net.boreeas.frozenircd.command;
 
+import net.boreeas.frozenircd.utils.Filter;
 import java.util.Set;
 import net.boreeas.frozenircd.ChannelPool;
 import net.boreeas.frozenircd.Flagable;
@@ -27,6 +28,7 @@ import net.boreeas.frozenircd.utils.StringUtils;
 import net.boreeas.frozenircd.connection.Connection;
 import net.boreeas.frozenircd.utils.SharedData;
 import net.boreeas.frozenircd.connection.client.Client;
+import net.boreeas.frozenircd.utils.PatternMatcher;
 import static net.boreeas.frozenircd.command.Reply.*;
 import static net.boreeas.frozenircd.config.ConfigData.*;
 import static net.boreeas.frozenircd.config.ConfigKey.*;
@@ -37,20 +39,21 @@ import static net.boreeas.frozenircd.config.ConfigKey.*;
  */
 public class ClientCommandParser {
     
-    public static final String PING = "PING";
-    public static final String PONG = "PONG";
-    public static final String USER = "USER";
-    public static final String NICK = "NICK";
-    public static final String PASS = "PASS";
-    public static final String OPER = "OPER";
-    public static final String MODE = "MODE";
-    public static final String QUIT = "QUIT";
-    public static final String STOP = "STOP";
-    public static final String JOIN = "JOIN";
-    public static final String PART = "PART";
-    public static final String TOPIC = "TOPIC";
-    public static final String NAMES = "NAMES";
-    public static final String PRIVMSG = "PRIVMSG";
+    private static final String PING = "PING";
+    private static final String PONG = "PONG";
+    private static final String USER = "USER";
+    private static final String NICK = "NICK";
+    private static final String PASS = "PASS";
+    private static final String OPER = "OPER";
+    private static final String MODE = "MODE";
+    private static final String QUIT = "QUIT";
+    private static final String STOP = "STOP";
+    private static final String JOIN = "JOIN";
+    private static final String PART = "PART";
+    private static final String TOPIC = "TOPIC";
+    private static final String NAMES = "NAMES";
+    private static final String LIST = "LIST";
+    private static final String PRIVMSG = "PRIVMSG";
     
     
     public static void parseClientCommand(String command, Client client, String[] args) {
@@ -114,6 +117,10 @@ public class ClientCommandParser {
                 
             case NAMES:
                 onNamesCommand(client, args);
+                break;
+                
+            case LIST:
+                onListCommand(client, args);
                 break;
                 
             default:
@@ -491,27 +498,70 @@ public class ClientCommandParser {
         
         if (args.length == 0) {
             
-            Set<Channel> results = ChannelPool.select(SharedData.passAllFilter);
+            Set<Channel> results = ChannelPool.getChannels(SharedData.passAllFilter);
             for (Channel chan: results) {
                 
-                String names = (client.isInChannel(args[0])) ? chan.names() : chan.visibleNames();
+                String names = (client.isInChannel(chan.getName())) ? chan.names() : chan.visibleNames();
                 if (names.isEmpty()) continue;
                 
                 client.sendStandardFormat(Reply.RPL_NAMREPLY.format(client.getNickname(), '=', chan.getName(), names));
             }
             
         } else {
-            Channel chan = ChannelPool.getChannel(args[0]);
-            if (chan == null) return;
             
-            String names = (client.isInChannel(args[0])) ? chan.names() : chan.visibleNames();
-            if (names.isEmpty()) return;
-            
-            client.sendStandardFormat(Reply.RPL_NAMREPLY.format(client.getNickname(), '=', chan.getName(), names));
-            client.sendStandardFormat(Reply.RPL_ENDOFNAMES.format(client.getNickname(), chan.getName()));
+            for (String name: args[0].split(",")) {
+                Channel chan = ChannelPool.getChannel(name);
+                if (chan == null) continue;
+
+                String names = (client.isInChannel(args[0])) ? chan.names() : chan.visibleNames();
+                if (names.isEmpty()) continue   ;
+
+                client.sendStandardFormat(Reply.RPL_NAMREPLY.format(client.getNickname(), '=', chan.getName(), names));
+                client.sendStandardFormat(Reply.RPL_ENDOFNAMES.format(client.getNickname(), chan.getName()));
+            }
         }
     }
     
+    private static void onListCommand(Client client, String[] args) {
+        
+        if (!client.registrationCompleted()) return;
+        
+        Filter<Channel> chanFilter;
+        
+        if (args.length == 0) {
+            chanFilter = new Filter<Channel>() {
+
+                @Override
+                public boolean pass(Channel instance) {
+                    return true;
+                }
+            };
+        } else {
+            final String[] channels = args[0].split(",");
+            
+            chanFilter = new Filter<Channel>() {
+
+                @Override
+                public boolean pass(Channel instance) {
+                    
+                    for (String name: channels) {
+                        if (PatternMatcher.match(name, instance.getName())) {
+                            return true;
+                        }
+                    }
+                    
+                    return false;
+                }
+            };
+        }
+        
+        client.sendStandardFormat(Reply.RPL_LISTSTART.format(client.getNickname()));
+        for (Channel chan: ChannelPool.getChannels(chanFilter)) {
+            String reply = Reply.RPL_LIST.format(client.getNickname(), chan.getName(), chan.size(), chan.getTopic());
+            client.sendStandardFormat(reply);
+        }
+        client.sendStandardFormat(Reply.RPL_LISTEND.format(client.getNickname()));
+    }
     
     private static void onUnknownCommand(Client client, String command) {
         

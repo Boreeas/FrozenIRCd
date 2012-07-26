@@ -67,6 +67,24 @@ public enum Reply {
     RPL_UMODEIS             ("221 %s :+%s", 2),
     
     /**
+     * Sent as the first line of a LIST reply.<br />
+     * Parameters: nick
+     */
+    RPL_LISTSTART           ("321 %s Channels :Users Name", 1),
+    
+    /**
+     * Sent as channel info in a LIST reply.<br />
+     * Parameters: nick, channel, number of users, topic
+     */
+    RPL_LIST                ("322 %s %s %s :%s", 4),
+    
+    /**
+     * Sent as the last line of a LIST reply.<br />
+     * Parameters: nick
+     */
+    RPL_LISTEND             ("323 %s :End of LIST", 1),
+    
+    /**
      * Sent to inform the client of the mode flags set for a channel.<br />
      * Parameters: nick, channel name, flags, flag params
      */

@@ -46,7 +46,7 @@ public class ChannelPool {
     }
     
     
-    public synchronized static Set<Channel> select(Filter<Channel> filter) {
+    public synchronized static Set<Channel> getChannels(Filter<Channel> filter) {
         
         Set<Channel> results = new HashSet<>();
         
