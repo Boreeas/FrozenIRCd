@@ -22,21 +22,16 @@ import junit.framework.TestCase;
  * @author malte
  */
 public class HashUtilsTest extends TestCase {
-    
+
     public HashUtilsTest(String testName) {
         super(testName);
-    }
-    
-    @Override
-    protected void setUp() throws Exception {
-        super.setUp();
     }
 
     /**
      * Test of SHA256 method, of class HashUtils.
      */
     public void testSHA256() throws Exception {
-        
+
         System.out.println(HashUtils.SHA256("TestPW"));
     }
 }

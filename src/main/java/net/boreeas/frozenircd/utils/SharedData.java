@@ -24,8 +24,6 @@ import java.util.Arrays;
 import java.util.regex.Pattern;
 import net.boreeas.frozenircd.command.ClientCommandParser;
 import net.boreeas.frozenircd.command.Reply;
-import net.boreeas.frozenircd.connection.Connection;
-import net.boreeas.frozenircd.connection.ConnectionPool;
 import net.boreeas.frozenircd.connection.client.Client;
 import net.boreeas.frozenircd.connection.server.ServerInputHandler;
 import net.boreeas.frozenircd.connection.server.ServerLink;
@@ -39,26 +37,26 @@ import static net.boreeas.frozenircd.config.ConfigKey.*;
  * @author Boreeas
  */
 public class SharedData {
-    
-    
+
+
     // Utility class empty constructor
     private SharedData() {}
-    
+
     /**
      * The version of the protocol used for this implementation
      */
     public static final String PROTOCOL_VERSION = "0210";
-    
+
     /**
      * The identifier for this build
      */
     public static final String BUILD_IDENTIFIER = "frozen001a";
-    
+
     /**
      * The public logger object to be used by every class.
      */
     public static final Logger logger = LoggerFactory.getLogger("FrozenIRCd");
-    
+
     /**
      * The handler that takes care of any input received from a server
      */
@@ -91,7 +89,7 @@ public class SharedData {
         } catch (Exception ex) {
 
             client.sendStandardFormat(Reply.ERR_UNKNOWNERROR.format(client.getSafeNickname(), command));
-            
+
             logger.error(String.format("Unhandled exception during command handling.\n"
                     + "\tCommand: %s\n"
                     + "\tWith args: %s\n"
@@ -99,18 +97,9 @@ public class SharedData {
                     + "Caused by:", command, Arrays.toString(args), client.getHostmask(), client), ex);
         }
     }
-    /**
-     * The pool of all connections
-     */
-    public static final ConnectionPool connectionPool = new ConnectionPool();
-    
-    /**
-     * An additional pool, containing only server links
-     */
-    public static final ConnectionPool linkPool = new ConnectionPool();
-    
-    
- 
+
+
+
     /**
      * Determines whether a password is needed for a connection
      */
@@ -120,27 +109,27 @@ public class SharedData {
      * Determines whether opers can set modes for other users and modes for channels they are not part of.
      */
     public static final boolean operCanSetModes = getFirstConfigOption(OPER_CANSETMODE).equalsIgnoreCase("true");
-    
+
     /**
      * Determines whether opers can message channels they are not in
      */
     public static final boolean operCanMsgChan = getFirstConfigOption(OPER_CANMSGCHAN).equalsIgnoreCase("true");
-    
+
     /**
      * The pattern that nicknames must adhere to
      */
     public static final Pattern nickPattern = Pattern.compile(getConfigOption(NICK_PATTERN)[0]);
-    
+
     /**
      * The minimum length of nicknames
      */
     public static final int minNickLength = Integer.parseInt(getFirstConfigOption(MIN_NICK_LENGTH));
-    
+
     /**
      * The maximum length of nicknames
      */
     public static final int maxNickLength = Integer.parseInt(getFirstConfigOption(MAX_NICK_LENGTH));
-    
+
     /**
      * This filter returns true for all connections
      */
@@ -156,7 +145,7 @@ public class SharedData {
      * The motd sent to a connected client after the registration has been sent
      */
     public static final String motd = readMOTD();
-    
+
     /**
      * Returns the lowercase version of <code>string</code> with the
      * @param string
@@ -220,29 +209,29 @@ public class SharedData {
 
         return new String(oldChars, 0, newLen);
     }
-    
-    
-    
-    
+
+
+
+
     /**
      * Returns the content of the MOTD file, or <code>null</code> if no MOTD file is present
      * @return The content of the MOTD file
      */
     private static String readMOTD() {
-        
+
         File motdFile = new File("./configs/motd");
-        
+
         if (!motdFile.exists()) {
-            
+
             logger.warn("No MOTD file found.");
             return null;
         }
-        
+
         try {
-            
+
             return StreamUtils.readFully(new BufferedReader(new InputStreamReader(new FileInputStream(motdFile))));
         } catch (IOException ex) {
-            
+
             logger.error("Error while reading from MOTD file", ex);
             return null;
         }

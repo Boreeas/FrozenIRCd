@@ -15,9 +15,6 @@
  */
 package net.boreeas.frozenircd.utils;
 
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -26,7 +23,7 @@ import static org.junit.Assert.*;
  * @author malte
  */
 public class PatternMatcherTest {
-    
+
     public PatternMatcherTest() {
     }
 
@@ -35,63 +32,63 @@ public class PatternMatcherTest {
      */
     @Test
     public void testMatchLiteral() {
-        
+
         assertTrue(PatternMatcher.matchGlob("foo", "foo"));
         assertTrue(PatternMatcher.matchGlob("FOO", "FOO"));
         assertTrue(PatternMatcher.matchGlob("Foo", "Foo"));
-        
+
         assertTrue(PatternMatcher.matchGlob("FOO", "foo"));
         assertTrue(PatternMatcher.matchGlob("fOo", "FoO"));
         assertTrue(PatternMatcher.matchGlob("foo", "FOO"));
-        
+
         assertTrue(PatternMatcher.matchGlob("With spaces", "WITH SPACES"));
         assertTrue(PatternMatcher.matchGlob("With_special!$&/W§$chars", "WITH_SPECIAL!$&/W§$chars"));
-        
+
         assertFalse(PatternMatcher.matchGlob("Length mismatch", "Length  mismatch"));
     }
-    
+
     @Test
     public void testMatchSingleWildcard() {
-        
+
         assertTrue(PatternMatcher.matchGlob("f?o", "foo"));
         assertTrue(PatternMatcher.matchGlob("f?o", "flo"));
         assertTrue(PatternMatcher.matchGlob("f?o", "f!o"));
         assertFalse(PatternMatcher.matchGlob("f?o", "!oo"));
         assertTrue(PatternMatcher.matchGlob("f?o", "f?o"));
-        
+
         assertTrue(PatternMatcher.matchGlob("???", "foo"));
         assertTrue(PatternMatcher.matchGlob("???", "bar"));
         assertFalse(PatternMatcher.matchGlob("???", "foobar"));
     }
-    
+
     @Test
     public void testMatchMultiWildcard() {
-        
+
         assertTrue(PatternMatcher.matchGlob("*", ""));
         assertTrue(PatternMatcher.matchGlob("*", "a"));
         assertTrue(PatternMatcher.matchGlob("*", "ab"));
         assertTrue(PatternMatcher.matchGlob("*", "abc"));
-        
+
         assertTrue(PatternMatcher.matchGlob("*a", "a"));
         assertTrue(PatternMatcher.matchGlob("*a", "ba"));
         assertTrue(PatternMatcher.matchGlob("*a", "cba"));
-        
+
         assertTrue(PatternMatcher.matchGlob("a*", "a"));
         assertTrue(PatternMatcher.matchGlob("a*", "ab"));
         assertTrue(PatternMatcher.matchGlob("a*", "abc"));
-        
+
         assertTrue(PatternMatcher.matchGlob("a*d", "ad"));
         assertTrue(PatternMatcher.matchGlob("a*d", "abcd"));
-        
+
         assertTrue(PatternMatcher.matchGlob("*a*", "a"));
         assertTrue(PatternMatcher.matchGlob("*a*", "dcba"));
         assertTrue(PatternMatcher.matchGlob("*a*", "abcd"));
         assertTrue(PatternMatcher.matchGlob("*a*", "dcbabcd"));
     }
-    
+
     @Test
     public void testCombined() {
-        
+
         assertTrue(PatternMatcher.matchGlob("?????????*", "123456789"));
         assertTrue(PatternMatcher.matchGlob("?????????*", "1234567890"));
         assertFalse(PatternMatcher.matchGlob("?????????*", "12345678"));

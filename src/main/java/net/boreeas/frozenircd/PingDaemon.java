@@ -18,6 +18,7 @@ package net.boreeas.frozenircd;
 import net.boreeas.frozenircd.config.ConfigData;
 import net.boreeas.frozenircd.config.ConfigKey;
 import net.boreeas.frozenircd.connection.Connection;
+import net.boreeas.frozenircd.connection.ConnectionPool;
 import net.boreeas.frozenircd.utils.SharedData;
 
 /**
@@ -25,13 +26,13 @@ import net.boreeas.frozenircd.utils.SharedData;
  * @author Boreeas
  */
 public class PingDaemon extends Thread {
-    
+
     public PingDaemon() {
-        
+
         super("PingDaemon");
         setDaemon(true);
     }
-    
+
     @Override
     public void run() {
 
@@ -41,17 +42,15 @@ public class PingDaemon extends Thread {
         int timeSinceLastPingMillis = pingFreqMillis;
 
         while (true) {
-            
-            for (Connection connection : SharedData.connectionPool.getConnections(SharedData.passAllFilter)) {
+
+            for (Connection connection : ConnectionPool.ALL.getConnections(SharedData.passAllFilter)) {
 
                 // Disconnect if ping request sent
-                if (connection.getPingRequestText() != null) {
+                if (connection.getPingRequestText() != null
+                    && timeDiff(connection) > pingTimeoutMillis) {
 
-                    if (System.currentTimeMillis() - connection.getLastPingTime() > pingTimeoutMillis) {
+                    connection.disconnect("Ping Timeout: " + timeDiff(connection)/1000 + " seconds");
 
-                        connection.disconnect(String.format("Timeout: Ping Timeout: %s seconds",
-                                ( ( System.currentTimeMillis() - connection.getLastPingTime() ) / 1000 )));
-                    }
                 }
 
                 // Send a ping request
@@ -66,10 +65,10 @@ public class PingDaemon extends Thread {
 
                 timeSinceLastPingMillis = 0;
             }
-            
+
             // Wait for next
             try {
-                
+
                 sleep(pingTimeoutMillis);
                 timeSinceLastPingMillis += pingTimeoutMillis;
             }
@@ -77,5 +76,10 @@ public class PingDaemon extends Thread {
                 SharedData.logger.warn("Unable to sleep in PING daemon", ex);
             }
         }
+    }
+
+    private long timeDiff(Connection conn) {
+
+        return System.currentTimeMillis() - conn.getLastPingTime();
     }
 }

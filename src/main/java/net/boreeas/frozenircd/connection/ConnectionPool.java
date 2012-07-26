@@ -30,105 +30,102 @@ import net.boreeas.frozenircd.connection.client.Client;
  *
  * @author Boreeas
  */
-public class ConnectionPool {
-    
+public enum ConnectionPool {
+
+    ALL, LINKS;
+
     private Map<UUID, Connection> pool = new HashMap<>();
-    
-    public ConnectionPool() {
-        
-        
-    }
-    
+
     /**
      * Adds a connection to the pool.
      * @param identifier The unique identifier for the connection
      * @param connection The connection to add
      */
     public void addConnection(UUID identifier, Connection connection) {
-        
+
         pool.put(identifier, connection);
     }
-    
+
     /**
      * Removes the connection for the given identifier.
      * @param identifier The unique identifier for that connection
      * @return The removed connection, or <code>null</code> if none was removed
      */
     public Connection removeConnection(UUID identifier) {
-        
+
         return pool.remove(identifier);
     }
-    
+
     /**
      * Returns the connection for the given identifier
      * @param identifier The unique identifier for the connection
      * @return The associated connection
      */
     public Connection getConnection(UUID identifier) {
-        
+
         return pool.get(identifier);
     }
-    
+
     /**
      * Broadcasts a message to every attached connection except <code>source</code>
      * @param message The message to send
      * @param source The connection from which the message was received. If this is null, the message will be broadcasted to every connection
      */
     public void broadcast(String message, Connection source) {
-        
+
         for (Entry<UUID, Connection> entry: pool.entrySet()) {
-            
+
             //Do not send a message to the original target
             if (!entry.getValue().equals(source)) {
-                
+
                 entry.getValue().send(message);
             }
         }
     }
-    
+
     public void broadcast(String message, Filter<Connection> filter) {
-        
+
         for (Entry<UUID, Connection> entry: pool.entrySet()) {
-            
+
             if (filter.pass(entry.getValue())) {
-                
+
                 entry.getValue().send(message);
             }
         }
     }
-    
+
     public synchronized void notifyClients(String message) {
-        
+
         for (Entry<UUID, Connection> entry: pool.entrySet()) {
-            
+
             if (entry.getValue() instanceof Client) {
-                
+
                 Client client = (Client)entry.getValue();
                 client.sendNotice(ConfigData.getFirstConfigOption(ConfigKey.HOST), client.getSafeNickname(), message);
             }
         }
     }
-    
+
     /**
      * Disconnects all connections in this pool.
      */
     public synchronized void disconnectAll() {
-        
+
         for (Entry<UUID, Connection> entry: pool.entrySet()) {
-            
+
             entry.getValue().disconnect();
         }
     }
-    
+
     public synchronized Set<Connection> getConnections(Filter<Connection> filter) {
-        
+
         Set<Connection> results = new HashSet<Connection>();
-        
+
         for (Connection conn: pool.values()) {
-            
+
             if (filter.pass(conn)) results.add(conn);
         }
-        
+
         return results;
     }
 }

@@ -150,27 +150,32 @@ public class Mode {
         defaultAddCmode(user, target, CMODE_INVITEONLY, null, adding);
     }
 
-    
+
     private static void defaultAddCmode(Client user, Channel target, char flag, String param, boolean adding) {
 
         String reply;
 
         if (!user.isInChannel(target.getName())) {
             reply = Reply.ERR_NOTONCHANNEL.format(user.getNickname(), target.getName());
-        } else if (!target.isOp(user)) {
-            reply = Reply.ERR_CHANOPRIVSNEEDED.format(user.getNickname(), target.getName());
-        } else {
-
-            if (adding) {
-                target.addFlag(flag, param);
-            } else {
-                target.removeFlag(flag);
-            }
-
-            reply = Reply.RPL_CHANNELMODEIS.format(user.getNickname(), target.getName(),
-                                                   target.flags(), target.flagParams());
+            user.sendStandardFormat(reply);
+            return;
         }
 
-        user.sendStandardFormat(reply);
+        if (!target.isOp(user)) {
+            reply = Reply.ERR_CHANOPRIVSNEEDED.format(user.getNickname(), target.getName());
+            user.sendStandardFormat(reply);
+            return;
+        }
+
+        if (adding) {
+            target.addFlag(flag, param);
+        } else {
+            target.removeFlag(flag);
+        }
+
+        reply = Reply.RPL_CHANNELMODEIS.format(user.getNickname(), target.getName(),
+                                                   target.flags(), target.flagParams());
+
+        // TODO figure out mode format for channel notifications
     }
 }
