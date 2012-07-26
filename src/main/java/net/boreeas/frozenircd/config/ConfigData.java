@@ -374,7 +374,7 @@ public class ConfigData {
         
         for (String line: lineSet) {
             
-            if (PatternMatcher.match(line, host)) {
+            if (PatternMatcher.matchGlob(line, host)) {
                 return true;
             }
         }
@@ -385,7 +385,7 @@ public class ConfigData {
     /**
      * Checks if the host matches any configured o-line.
      * @param host The host to check
-     * @return <code>true</code> if a match is found, <code>false</code> otherwise
+     * @return <code>true</code> if a matchGlob is found, <code>false</code> otherwise
      */
     public static boolean matchesOLine(String host) {
         

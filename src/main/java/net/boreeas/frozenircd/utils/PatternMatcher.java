@@ -27,10 +27,10 @@ public class PatternMatcher {
     /**
      * Matches two strings.
      * @param pattern The glob pattern
-     * @param text The string to match
+     * @param text The string to matchGlob
      * @return 
      */
-    public static boolean match(String pattern, String text) {
+    public static boolean matchGlob(String pattern, String text) {
 
     	return matchCharacter(pattern, 0, text, 0);
     }
@@ -54,12 +54,12 @@ public class PatternMatcher {
     			break;
 
     		case WILDCARD_MANY:
-    			// * at the end of the pattern will match anything
+    			// * at the end of the pattern will matchGlob anything
     			if (patternIndex + 1 >= pattern.length() || textIndex >= text.length()) {
     				return true;
     			}
 
-    			// Probe forward to see if we can get a match
+    			// Probe forward to see if we can get a matchGlob
     			while (textIndex < text.length()) {
     				if (matchCharacter(pattern, patternIndex + 1, text, textIndex)) {
     					return true;
@@ -77,7 +77,7 @@ public class PatternMatcher {
     			String textChar = text.substring(textIndex, textIndex + 1);
     			String patternChar = pattern.substring(patternIndex, patternIndex + 1);
 
-    			// Note the match is case insensitive
+    			// Note the matchGlob is case insensitive
     			if (textChar.compareToIgnoreCase(patternChar) != 0) {
     				return false;
     			}
@@ -88,7 +88,7 @@ public class PatternMatcher {
     		return true;
     	}
 
-    	// Go on to match the next character in the pattern
+    	// Go on to matchGlob the next character in the pattern
     	return matchCharacter(pattern, patternIndex + 1, text, textIndex + 1);
     }
 }

@@ -551,7 +551,7 @@ public class ClientCommandParser {
                     }
                     
                     for (String name: channels) {
-                        if (PatternMatcher.match(name, chan.getName())) {
+                        if (PatternMatcher.matchGlob(name, chan.getName())) {
                             return true;
                         }
                     }

@@ -25,6 +25,7 @@ import net.boreeas.frozenircd.command.Reply;
 import net.boreeas.frozenircd.connection.Connection;
 import net.boreeas.frozenircd.utils.Filter;
 import net.boreeas.frozenircd.connection.client.Client;
+import net.boreeas.frozenircd.utils.PatternMatcher;
 import net.boreeas.frozenircd.utils.SharedData;
 import net.boreeas.frozenircd.utils.StringUtils;
 
@@ -60,10 +61,11 @@ public class Channel implements Flagable {
      */
     private final Map<Character, String> channelmodes = new HashMap<>();
     
-    private final Set<Client> ops = new HashSet<>();
-    private final Set<Client> voices = new HashSet<>();
-    private final Set<Client> muted = new HashSet<>();
-    private final Set<Client> banned = new HashSet<>();
+    private final Set<String> ops = new HashSet<>();
+    private final Set<String> voiced = new HashSet<>();
+    private final Set<String> muted = new HashSet<>();
+    private final Set<String> banned = new HashSet<>();
+    private final Set<String> invited = new HashSet<>();
     
     /**
      * The clients that have currently joined the room.
@@ -73,6 +75,7 @@ public class Channel implements Flagable {
     // Thread locks
     private final Object clientLock = new Object();
     private final Object modeLock = new Object();
+    private final Object accessLock = new Object();
     
     /**
      * Creates a new channel with given name.
@@ -282,56 +285,82 @@ public class Channel implements Flagable {
             
     
     public boolean isOp(Client client) {
-        return ops.contains(client);
+        return checkAccess(ops, client.getHostmask());
     }
     
     public boolean isVoiced(Client client) {
-        return voices.contains(client);
+        return checkAccess(voiced, client.getHostmask());
     }
     
     public boolean isMuted(Client client) {
-        return muted.contains(client);
+        return checkAccess(muted, client.getHostmask());
     }
     
     public boolean isBanned(Client client) {
-        return banned.contains(client);
+        return checkAccess(banned, client.getHostmask());
+    }
+    
+    public boolean isInvited(Client client) {
+        return checkAccess(invited, client.getHostmask());
+    }
+    
+    private synchronized boolean checkAccess(Set<String> access, String mask) {
+        
+        for (String accessMask: access) {
+            if (PatternMatcher.matchGlob(accessMask, mask)) {
+                return true;
+            }
+        }
+        
+        return false;
     }
     
     public void op(Client client) {
-        ops.add(client);
+        op(client.getHostmask());
     }
     
-    public void deop(Client client) {
-        ops.remove(client);
+    public synchronized void op(String mask) {
+        ops.add(mask);
     }
     
-    public void voice(Client client) {
-        voices.add(client);
+    public synchronized void deop(String mask) {
+        ops.remove(mask);
     }
     
-    public void devoice(Client client) {
-        voices.remove(client);
+    public synchronized void voice(String mask) {
+        voiced.add(mask);
     }
     
-    public void mute(Client client) {
-        muted.add(client);
+    public synchronized void devoice(String mask) {
+        voiced.remove(mask);
     }
     
-    public void unmute(Client client) {
-        muted.remove(client);
+    public synchronized void mute(String mask) {
+        muted.add(mask);
     }
     
-    public void ban(Client client) {
-        banned.add(client);
+    public synchronized void unmute(String mask) {
+        muted.remove(mask);
     }
     
-    public void unban(Client client) {
-        banned.remove(client);
+    public synchronized void ban(String mask) {
+        banned.add(mask);
+    }
+    
+    public synchronized void unban(String mask) {
+        banned.remove(mask);
+    }
+    
+    public synchronized void invite(String mask) {
+        invited.add(mask);
+    }
+    
+    public synchronized void uninvite(String mask) {
+        invited.remove(mask);
     }
     
     
     public static boolean isChanTypeSupported(char chantype) {
-        
         return chantype == '#';
     }
 }
