@@ -522,30 +522,36 @@ public class ClientCommandParser {
         }
     }
     
-    private static void onListCommand(Client client, String[] args) {
+    private static void onListCommand(final Client client, String[] args) {
         
         if (!client.registrationCompleted()) return;
         
         Filter<Channel> chanFilter;
         
         if (args.length == 0) {
+            
             chanFilter = new Filter<Channel>() {
 
                 @Override
-                public boolean pass(Channel instance) {
-                    return true;
+                public boolean pass(Channel chan) {
+                    return !chan.hasFlag(Mode.CMODE_SECRET) || client.isInChannel(chan.getName());
                 }
             };
         } else {
+            
             final String[] channels = args[0].split(",");
             
             chanFilter = new Filter<Channel>() {
 
                 @Override
-                public boolean pass(Channel instance) {
+                public boolean pass(Channel chan) {
+                    
+                    if (chan.hasFlag(Mode.CMODE_SECRET) && !client.isInChannel(chan.getName())) {
+                        return false;
+                    }
                     
                     for (String name: channels) {
-                        if (PatternMatcher.match(name, instance.getName())) {
+                        if (PatternMatcher.match(name, chan.getName())) {
                             return true;
                         }
                     }
@@ -556,10 +562,13 @@ public class ClientCommandParser {
         }
         
         client.sendStandardFormat(Reply.RPL_LISTSTART.format(client.getNickname()));
+        
         for (Channel chan: ChannelPool.getChannels(chanFilter)) {
+        
             String reply = Reply.RPL_LIST.format(client.getNickname(), chan.getName(), chan.size(), chan.getTopic());
             client.sendStandardFormat(reply);
         }
+        
         client.sendStandardFormat(Reply.RPL_LISTEND.format(client.getNickname()));
     }
     

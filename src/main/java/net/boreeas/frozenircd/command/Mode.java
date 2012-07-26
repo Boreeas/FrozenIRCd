@@ -37,7 +37,9 @@ public class Mode {
     //</editor-fold>
     
     //<editor-fold defaultstate="collapsed" desc="cmodes">
-    public static final String CMODES = "";
+    public static final String CMODES = "s";
+    
+    public static final char CMODE_SECRET = 's';
     //</editor-fold>
     
     
@@ -68,11 +70,15 @@ public class Mode {
                 return argIndex;
             }
             
-            if (mode == NO_FLAG) user.sendStandardFormat(Reply.RPL_CHANNELMODEIS.format(user.getNickname(), 
-                                                                                        chan.getName(),
-                                                                                        chan.flags(),
-                                                                                        chan.flagParams()));
-            
+            if (mode == CMODE_SECRET)           processCmodeSecret(user, chan, adding);
+            else if (mode == NO_FLAG) {
+                
+                String reply = Reply.RPL_CHANNELMODEIS.format(user.getNickname(), chan.getName(),
+                                                              chan.flags(), chan.flagParams());
+                user.sendStandardFormat(Reply.RPL_CHANNELMODEIS.format(reply));
+            } else {
+                user.sendStandardFormat(Reply.ERR_UNKNOWNMODE.format(user.getNickname(), mode));
+            }
         } else {
             
             SharedData.logger.error("Unhandled Mode Target '" + target + "' at:");
@@ -112,5 +118,26 @@ public class Mode {
         } else {
             target.removeFlag(UMODE_REGISTERED);
         }
+    }
+    
+    
+    
+    
+    // Cmodes
+    private static void processCmodeSecret(Client user, Channel target, boolean adding) {
+        
+        String reply;
+        
+        if (!user.isInChannel(target.getName())) {
+            reply = Reply.ERR_NOTONCHANNEL.format(user.getNickname(), target.getName());
+        } else if (!target.isOp(user)) {
+            reply = Reply.ERR_CHANOPRIVSNEEDED.format(user.getNickname(), target.getName());
+        } else {
+            target.addFlag(CMODE_SECRET, null);
+            reply = Reply.RPL_CHANNELMODEIS.format(user.getNickname(), target.getName(), 
+                                                   target.flags(), target.flagParams());
+        }
+        
+        user.sendStandardFormat(reply);
     }
 }
