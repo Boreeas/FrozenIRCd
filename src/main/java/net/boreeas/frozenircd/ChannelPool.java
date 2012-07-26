@@ -27,34 +27,36 @@ import net.boreeas.frozenircd.utils.SharedData;
  * @author Boreeas
  */
 public class ChannelPool {
-        
+
     private static final Map<String, Channel> channels = new HashMap<>();
-    
+
     public static Channel getChannel(String name) {
-        
+
         return channels.get(SharedData.toLowerCase(name));
     }
-    
+
     public synchronized static void addChannel(Channel channel) {
-        
+
         channels.put(SharedData.toLowerCase(channel.getName()), channel);
     }
-    
+
     public synchronized static void removeChannel(String name) {
-        
+
         channels.remove(SharedData.toLowerCase(name));
     }
-    
-    
+
+
     public synchronized static Set<Channel> getChannels(Filter<Channel> filter) {
-        
+
         Set<Channel> results = new HashSet<>();
-        
+
         for (Channel chan: channels.values()) {
-            
-            if (filter.pass(chan)) results.add(chan);
+
+            if (filter.pass(chan)) {
+                results.add(chan);
+            }
         }
-        
+
         return results;
     }
 }

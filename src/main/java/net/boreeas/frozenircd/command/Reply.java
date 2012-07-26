@@ -198,6 +198,13 @@ public enum Reply {
 
 
     /**
+     * Sent when a channel-specific command targets a user
+     * that is not in that channel.<br />
+     * Parameters: nick, target nick, channel
+     */
+    ERR_USERNOTINCHANNEL    ("441 %s %s %s :User not in channel", 3),
+
+    /**
      * Sent whenever a client attempts to use a command on a channel they are not a member of.<br />
      * Parameters: nick, channel
      */

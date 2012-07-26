@@ -23,62 +23,77 @@ import net.boreeas.frozenircd.config.ConfigKey;
  * @author Boreeas
  */
 public enum Command {
-    
+
     //<editor-fold defaultstate="collapsed" desc="Commands">
     /**
      * Sent as a reply to a PING request.<br />
      * Parameters: Server hostname, ping argument
      */
     PONG                    ("PONG %s :%s", 2),
-    
+
     /**
      * Sent as alive check.<br />
      * Parameters: ping argument
      */
     PING                    ("PING :%s", 1),
-    
+
     /**
-     * Sent as a reply when a client successfully joined a channel
+     * Sent as a reply when a client successfully joined a channel.<br />
+     * Parameters: channel
      */
     JOIN                    ("JOIN %s", 1),
-    
+
     /**
-     * Sent as a reply when a client parts a channel
+     * Sent as a reply when a client parts a channel.<br />
+     * Parameters: channel, reason
      */
     PART                    ("PART %s :%s", 2),
-    
+
     /**
-     * Sent when a client disconnects
+     * Sent when a mode change occurs in a room.<br />
+     * Parameters: channel, +/-, mode, mode param
      */
-    QUIT                    ("QUIT " + ConfigData.getFirstConfigOption(ConfigKey.HOST) + " :%s", 1);
+    MODE                    ("MODE %s %s%s %s", 4),
+
+    /**
+     * Sent when a client disconnects.<br />
+     * Parameters: reason
+     */
+    QUIT                    ("QUIT " + ConfigData.getFirstConfigOption(ConfigKey.HOST) + " :%s", 1),
+
+    /**
+     * Sent when a client is kicked from a room.<br />
+     * Parameters: nick, channel, reason
+     */
+    KICK                    ("KICK %s %s :%s", 3);
     //</editor-fold>
-    
-    
+
+
     private String message;
     private int numOfParams;
-    
+
     private Command(String message, int numOfParams) {
-        
+
         this.message = message;
         this.numOfParams = numOfParams;
     }
-    
+
     public String getMessage() {
         return message;
     }
-    
+
     public int getNumOfParams() {
         return numOfParams;
     }
-    
-    
+
+
     public String format(Object... args) {
-        
+
         if (args.length < numOfParams) {
-            
+
             throw new IllegalArgumentException(String.format("Not enough parameters to format reply '%s' (Needed: %s, Got: %s)", message, numOfParams, args.length));
         }
-        
+
         return String.format(message, (Object[]) args);
     }
 }

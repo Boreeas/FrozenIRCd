@@ -156,10 +156,19 @@ public class Channel implements Flagable {
 
     public void partChannel(final Client client, String reason) {
 
-        sendFromClient(client, Command.PART.format(this.name, reason));
+        sendFromClient(client, Command.PART.format(name, reason));
 
         synchronized (clientLock) {
             clients.remove(client);
+        }
+    }
+
+    public void kick(Client issuer, Client target, String reason) {
+
+        sendFromClient(issuer, Command.KICK.format(name, target.getNickname(), reason));
+
+        synchronized (clientLock) {
+            clients.remove(target);
         }
     }
 

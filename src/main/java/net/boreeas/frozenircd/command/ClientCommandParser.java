@@ -30,6 +30,7 @@ import net.boreeas.frozenircd.connection.ConnectionPool;
 import net.boreeas.frozenircd.utils.SharedData;
 import net.boreeas.frozenircd.connection.client.Client;
 import net.boreeas.frozenircd.utils.PatternMatcher;
+import sun.net.spi.nameservice.dns.DNSNameService;
 import static net.boreeas.frozenircd.command.Reply.*;
 import static net.boreeas.frozenircd.config.ConfigData.*;
 import static net.boreeas.frozenircd.config.ConfigKey.*;
@@ -40,6 +41,7 @@ import static net.boreeas.frozenircd.config.ConfigKey.*;
  */
 public class ClientCommandParser {
 
+    private static final String DIE = "DIE";
     private static final String PING = "PING";
     private static final String PONG = "PONG";
     private static final String USER = "USER";
@@ -51,9 +53,10 @@ public class ClientCommandParser {
     private static final String STOP = "STOP";
     private static final String JOIN = "JOIN";
     private static final String PART = "PART";
+    private static final String LIST = "LIST";
+    private static final String KICK = "KICK";
     private static final String TOPIC = "TOPIC";
     private static final String NAMES = "NAMES";
-    private static final String LIST = "LIST";
     private static final String INVITE = "INVITE";
     private static final String PRIVMSG = "PRIVMSG";
 
@@ -93,6 +96,7 @@ public class ClientCommandParser {
                 onQuitCommand(client, args);
                 break;
 
+            case DIE:
             case STOP:
                 onStopCommand(client, args);
                 break;
@@ -127,6 +131,10 @@ public class ClientCommandParser {
 
             case INVITE:
                 onInviteCommand(client, args);
+                break;
+
+            case KICK:
+                onKickCommand(client, args);
                 break;
 
             default:
@@ -608,8 +616,8 @@ public class ClientCommandParser {
             return;
         }
 
-        final String channel = args[0];
-        final String nick = args[1];
+        final String channel = args[1];
+        final String nick = args[0];
 
         Channel chan = ChannelPool.getChannel(channel);
         Set<Connection> targets = ConnectionPool.ALL.getConnections(new Filter<Connection>() {
@@ -622,6 +630,7 @@ public class ClientCommandParser {
 
         if (targets.isEmpty() || !(targets.toArray()[0] instanceof Client)) {
             client.sendStandardFormat(ERR_NOSUCHNICK.format(client.getNickname(), nick));
+            return;
         }
 
         Client target = (Client) targets.toArray()[0];
@@ -644,6 +653,34 @@ public class ClientCommandParser {
         // TODO awaycheck
         client.sendStandardFormat(RPL_INVITING.format(client.getNickname(), nick, channel));
         target.sendFromUser(client, INVITE, nick + " " + channel);
+    }
+
+    private static void onKickCommand(Client client, String[] args) {
+
+        if (args.length < 2) {
+            String reply = ERR_NEEDMOREPARAMS.format(client.getNickname(), KICK, "<channel> <user> [reason]");
+            client.sendStandardFormat(reply);
+            return;
+        }
+
+        String reason = (args.length >= 3) ? args[2] : client.getSafeNickname();
+
+        String[] channels = args[0].split(",");
+        String[] targets = args[1].split(",");
+
+        if (channels.length == 1) {
+            for (String target: targets) {
+                kickSingleUser(client, target, channels[0], reason);
+            }
+        } else if (channels.length == targets.length) {
+            for (int i = 0; i < targets.length; i++) {
+                kickSingleUser(client, targets[i], channels[i], reason);
+            }
+        } else {
+            String reply = ERR_NEEDMOREPARAMS.format(client.getNickname(), KICK,
+                                                     "Need exactly one or as many channels as targets");
+            client.sendStandardFormat(reply);
+        }
     }
 
 
@@ -687,5 +724,51 @@ public class ClientCommandParser {
 
         return name.length() >= SharedData.minNickLength
             && name.length() <= SharedData.maxNickLength;
+    }
+
+
+    private static void kickSingleUser(Client client, final String nick, String channel, String reason) {
+
+        Channel chan = ChannelPool.getChannel(channel);
+
+        Set<Connection> targets = ConnectionPool.ALL.getConnections(new Filter<Connection>() {
+
+            @Override
+            public boolean pass(Connection instance) {
+                return SharedData.stringsEqual(nick, instance.getCommonName());
+            }
+        });
+
+
+        if (chan == null) {
+            client.sendStandardFormat(ERR_NOSUCHCHANNEL.format(client.getNickname(), channel));
+            return;
+        }
+
+        if (targets.isEmpty() || !(targets.toArray()[0] instanceof Client)) {
+            // RFC2812 demands this instead of ERR_NOSUCHNICKNAME
+            client.sendStandardFormat(ERR_USERNOTINCHANNEL.format(client.getNickname(), nick, channel));
+            return;
+        }
+
+        Client target = (Client) targets.toArray()[0];
+
+        if (!client.isInChannel(channel)) {
+            client.sendStandardFormat(ERR_NOTONCHANNEL.format(client.getNickname(), channel));
+            return;
+        }
+
+        if (!target.isInChannel(channel)) {
+            client.sendStandardFormat(ERR_USERNOTINCHANNEL.format(client.getNickname(), nick, channel));
+            return;
+        }
+
+        if (!chan.isOp(client)) {
+            client.sendStandardFormat(ERR_CHANOPRIVSNEEDED.format(client.getNickname(), channel));
+            return;
+        }
+
+        chan.kick(client, target, reason);
+        target.removeChannel(channel);
     }
 }
