@@ -15,22 +15,22 @@
  */
 package net.boreeas.frozenircd.command;
 
-import net.boreeas.frozenircd.utils.Filter;
+import java.security.NoSuchAlgorithmException;
 import java.util.Set;
+import net.boreeas.frozenircd.Channel;
 import net.boreeas.frozenircd.ChannelPool;
 import net.boreeas.frozenircd.Flagable;
-import net.boreeas.frozenircd.Channel;
 import net.boreeas.frozenircd.Server;
 import net.boreeas.frozenircd.config.IncompleteConfigurationException;
-import java.security.NoSuchAlgorithmException;
-import net.boreeas.frozenircd.utils.HashUtils;
-import net.boreeas.frozenircd.utils.StringUtils;
 import net.boreeas.frozenircd.connection.Connection;
 import net.boreeas.frozenircd.connection.ConnectionPool;
-import net.boreeas.frozenircd.utils.SharedData;
 import net.boreeas.frozenircd.connection.client.Client;
+import net.boreeas.frozenircd.utils.Filter;
+import net.boreeas.frozenircd.utils.HashUtils;
 import net.boreeas.frozenircd.utils.PatternMatcher;
-import sun.net.spi.nameservice.dns.DNSNameService;
+import net.boreeas.frozenircd.utils.SharedData;
+import net.boreeas.frozenircd.utils.StringUtils;
+
 import static net.boreeas.frozenircd.command.Reply.*;
 import static net.boreeas.frozenircd.config.ConfigData.*;
 import static net.boreeas.frozenircd.config.ConfigKey.*;
@@ -40,6 +40,8 @@ import static net.boreeas.frozenircd.config.ConfigKey.*;
  * @author Boreeas
  */
 public class ClientCommandParser {
+
+    private ClientCommandParser() {}
 
     private static final String DIE = "DIE";
     private static final String PING = "PING";
@@ -249,7 +251,7 @@ public class ClientCommandParser {
             }
 
 
-            client.broadcastToChannels("NICK :" + args[0]);
+            client.broadcastToChannels(Command.NICK.format(args[0]));
             client.setNickname(args[0]);
         }
 
@@ -385,7 +387,7 @@ public class ClientCommandParser {
                 adding = false;
             } else {
 
-                argIndex = Mode.handleModeChange(c, client, client, adding, args, argIndex);
+                argIndex = Mode.handleModeChange(c, client, target, adding, args, argIndex);
             }
         }
     }
@@ -417,20 +419,14 @@ public class ClientCommandParser {
         }    // Drop
 
         if (args.length < 1) {
-            client.send(Reply.ERR_NEEDMOREPARAMS.format(client.getSafeNickname(),
-                                                       JOIN, "<channel> [password]"));
+            client.sendStandardFormat(ERR_NEEDMOREPARAMS.format(client.getNickname(),
+                                                                JOIN, "<channel> [password]"));
             return;
         }
 
-        Channel channel = ChannelPool.getChannel(args[0]);
-
-        if (channel == null) {
-            channel = new Channel(SharedData.toLowerCase(args[0]));
-            ChannelPool.addChannel(channel);
+        for (String chan: args[0].split(",")) {
+            joinSingleChannel(client, chan);
         }
-
-        channel.joinChannel(client);
-        client.addChannel(channel.getName());
     }
 
     private static void onPartCommand(Client client, String[] args) {
@@ -445,21 +441,14 @@ public class ClientCommandParser {
             return;
         }
 
-        String channel = args[0];
-        if (!client.isInChannel(channel)) {
-
-            client.sendStandardFormat(Reply.ERR_NOTONCHANNEL.format(client.getNickname(), args[0]));
-            return;
-        }
-
-
         String reason = client.getNickname();
         if (args.length >= 2) {
-            reason = StringUtils.joinArray(args, 1);
+            reason = args[1];
         }
 
-        client.removeChannel(channel);
-        ChannelPool.getChannel(channel).partChannel(client, reason);
+        for (String chanName: args[0].split(",")) {
+            partSingleChannel(client, chanName, reason);
+        }
     }
 
     private static void onTopicCommand(Client client, String[] args) {
@@ -650,33 +639,44 @@ public class ClientCommandParser {
             chan.invite(target.getNickname());
         }
 
-        // TODO awaycheck
+        if (target.hasFlag(Mode.UMODE_AWAY)) {
+            String awaymsg = target.getParam(Mode.UMODE_AWAY);
+            String awayInfo = RPL_AWAY.format(client.getNickname(), nick, awaymsg);
+            client.sendStandardFormat(awayInfo);
+        }
+
         client.sendStandardFormat(RPL_INVITING.format(client.getNickname(), nick, channel));
-        target.sendFromUser(client, INVITE, nick + " " + channel);
+        target.sendFromUser(client, Command.INVITE.format(nick + " " + channel));
     }
 
     private static void onKickCommand(Client client, String[] args) {
 
         if (args.length < 2) {
+
             String reply = ERR_NEEDMOREPARAMS.format(client.getNickname(), KICK, "<channel> <user> [reason]");
             client.sendStandardFormat(reply);
             return;
         }
 
-        String reason = (args.length >= 3) ? args[2] : client.getSafeNickname();
-
         String[] channels = args[0].split(",");
         String[] targets = args[1].split(",");
 
         if (channels.length == 1) {
+
             for (String target: targets) {
+
+                String reason = (args.length >= 3) ? args[2] : target;
                 kickSingleUser(client, target, channels[0], reason);
             }
         } else if (channels.length == targets.length) {
+
             for (int i = 0; i < targets.length; i++) {
+
+                String reason = (args.length >= 3) ? args[2] : targets[i];
                 kickSingleUser(client, targets[i], channels[i], reason);
             }
         } else {
+
             String reply = ERR_NEEDMOREPARAMS.format(client.getNickname(), KICK,
                                                      "Need exactly one or as many channels as targets");
             client.sendStandardFormat(reply);
@@ -726,6 +726,41 @@ public class ClientCommandParser {
             && name.length() <= SharedData.maxNickLength;
     }
 
+
+    private static void joinSingleChannel(Client client, String chanName) {
+
+        Channel channel = ChannelPool.getChannel(chanName);
+
+        if (channel == null) {
+            channel = new Channel(SharedData.toLowerCase(chanName));
+            ChannelPool.addChannel(channel);
+        }
+
+        if (channel.isBanned(client)) {
+            client.sendStandardFormat(ERR_BANNEDFROMCHAN.format(client.getNickname(), channel.getName()));
+            return;
+        }
+
+        if (channel.hasFlag(Mode.CMODE_INVITEONLY) && !channel.isInvited(client)) {
+            client.sendStandardFormat(ERR_INVITEONLYCHAN.format(client.getNickname(), channel.getName()));
+            return;
+        }
+
+        channel.joinChannel(client);
+        client.addChannel(channel.getName());
+    }
+
+    private static void partSingleChannel(Client client, String chanName, String reason) {
+
+        if (!client.isInChannel(chanName)) {
+
+            client.sendStandardFormat(Reply.ERR_NOTONCHANNEL.format(client.getNickname(), chanName));
+            return;
+        }
+
+        client.removeChannel(chanName);
+        ChannelPool.getChannel(chanName).partChannel(client, reason);
+    }
 
     private static void kickSingleUser(Client client, final String nick, String channel, String reason) {
 

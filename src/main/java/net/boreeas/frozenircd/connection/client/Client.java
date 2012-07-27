@@ -107,8 +107,8 @@ public class Client extends Connection implements Flagable {
         send(":" + ConfigData.getFirstConfigOption(ConfigKey.HOST) + " " + line);
     }
 
-    public void sendFromUser(Client user, String type, String message) {
-        send(":" + user.getDisplayHostmask() + " " + type + " " + message);
+    public void sendFromUser(Client user, String message) {
+        send(":" + user.getDisplayHostmask() + " " + message);
     }
 
     /**
@@ -294,7 +294,7 @@ public class Client extends Connection implements Flagable {
 
                 toLastArg = fields[1].split(":", 2);    // Split off the last arg (prefixed with ':')
 
-                if (toLastArg.length == 1) {
+                if (toLastArg.length == 1 && fields[1].contains(":")) {
                     toLastArg = new String[] { toLastArg[0], "" };  // String.split removes empty strings - put them back in
                 }
             }

@@ -230,10 +230,23 @@ public enum Reply {
     ERR_PASSWDMISMATCH      ("464 %s :Invalid password", 1),
 
     /**
-     * Send when a client attempts to set an unknown mode flag.<br />
+     * Sent when a client attempts to set an unknown mode flag.<br />
      * Parameters: nick, flag
      */
     ERR_UNKNOWNMODE         ("472 %s :Unknown mode flag %s", 2),
+
+    /**
+     * Sent when a client attempts to join an invite-only channel
+     * without being invited.<br />
+     * Parameters: nick, channel
+     */
+    ERR_INVITEONLYCHAN      ("473 %s %s :Channel is invite-only", 2),
+
+    /**
+     * Sent when a client attempts to join a room they are banned from.<br />
+     * Parameters: nick, channel
+     */
+    ERR_BANNEDFROMCHAN      ("474 %s %s :Banned from channel", 2),
 
     /**
      * Sent when an OPER-command is used by a non-OPER.<br />
@@ -301,6 +314,6 @@ public enum Reply {
             throw new IllegalArgumentException(String.format("Not enough parameters to format reply '%s' (Needed: %s, Got: %s)", message, numOfParams, args.length));
         }
 
-        return String.format(message, (Object[]) args);
+        return String.format(message, args);
     }
 }

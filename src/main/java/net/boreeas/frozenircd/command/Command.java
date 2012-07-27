@@ -56,6 +56,18 @@ public enum Command {
     MODE                    ("MODE %s %s%s %s", 4),
 
     /**
+     * Sent when a client changes their nickname.<br />
+     * Parameters: new nick
+     */
+    NICK                    ("NICK %s", 1),
+
+    /**
+     * Sent when a client is invited to a channel.<br />
+     * Parameters: invited nick, channel
+     */
+    INVITE                  ("INVITE %s %s", 2),
+
+    /**
      * Sent when a client disconnects.<br />
      * Parameters: reason
      */

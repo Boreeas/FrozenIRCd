@@ -26,14 +26,20 @@ import net.boreeas.frozenircd.utils.SharedData;
  */
 public class Mode {
 
+    private Mode() {
+    }
+
     public static final char NO_FLAG = '0';
 
     //<editor-fold defaultstate="collapsed" desc="umodes">
-    public static final String UMODES = "ior";
+    public static final String UMODES = "aiorsw";
 
+    public static final char UMODE_AWAY         = 'a';
     public static final char UMODE_INVISIBLE    = 'i';
     public static final char UMODE_OPER         = 'o';
     public static final char UMODE_REGISTERED   = 'r';
+    public static final char UMODE_SERVERMSG    = 's';
+    public static final char UMODE_WALLOPS      = 'w';
     //</editor-fold>
 
     //<editor-fold defaultstate="collapsed" desc="cmodes">
@@ -46,6 +52,8 @@ public class Mode {
 
     public static int handleModeChange(char mode, Client user, Flagable target, boolean adding, String[] args, int argIndex) {
 
+        int argmod = 0;
+
         if (target instanceof Client) {
 
             // Only opers can set modes for other users
@@ -54,22 +62,39 @@ public class Mode {
                 return argIndex;
             }
 
-            if (mode == UMODE_OPER) {
+            switch (mode) {
+                case UMODE_OPER:
+                    processUmodeOper(user, target, adding);
+                    break;
 
-                processUmodeOper(user, target, adding);
-            } else if (mode == UMODE_INVISIBLE) {
+                case UMODE_INVISIBLE:
+                    defaultAddUmode(target, UMODE_INVISIBLE, null, adding);
+                    break;
 
-                processUmodeInvisible(target, adding);
-            }else if (mode == UMODE_REGISTERED) {
+                case UMODE_REGISTERED:
+                    processUmodeRegistered(user, target, adding);
+                    break;
 
-                processUmodeRegistered(user, target, adding);
-            } else if (mode == NO_FLAG) {
+                case UMODE_AWAY:
+                    processUmodeAway(user);
+                    break;
 
-                user.sendStandardFormat(Reply.RPL_UMODEIS.format(user.getNickname(), user.flags()));
-            } else {
+                case UMODE_SERVERMSG:
+                    defaultAddUmode(target, UMODE_SERVERMSG, null, adding);
+                    break;
 
-                user.sendStandardFormat(Reply.ERR_UMODEUNKNOWNFLAG.format(user.getNickname(), mode));
+                case UMODE_WALLOPS:
+                    defaultAddUmode(target, UMODE_WALLOPS, null, adding);
+                    break;
+
+                case NO_FLAG:
+                    user.sendStandardFormat(Reply.RPL_UMODEIS.format(user.getNickname(), user.flags()));
+                    break;
+
+                default:
+                    user.sendStandardFormat(Reply.ERR_UMODEUNKNOWNFLAG.format(user.getNickname(), mode));
             }
+
         } else if (target instanceof Channel) {
 
             Channel chan = (Channel) target;
@@ -90,7 +115,7 @@ public class Mode {
 
                 String reply = Reply.RPL_CHANNELMODEIS.format(user.getNickname(), chan.getName(),
                                                               chan.flags(), chan.flagParams());
-                user.sendStandardFormat(Reply.RPL_CHANNELMODEIS.format(reply));
+                user.sendStandardFormat(reply);
             } else {
 
                 user.sendStandardFormat(Reply.ERR_UNKNOWNMODE.format(user.getNickname(), mode));
@@ -104,7 +129,7 @@ public class Mode {
             }
         }
 
-        return argIndex;
+        return argIndex + argmod;
     }
 
     private static void processUmodeOper(Client user, Flagable target, boolean adding) {
@@ -117,14 +142,6 @@ public class Mode {
         target.removeFlag(UMODE_OPER);
     }
 
-    private static void processUmodeInvisible(Flagable target, boolean adding) {
-
-        if (adding) {
-            target.addFlag(UMODE_INVISIBLE, null);
-        } else {
-            target.removeFlag(UMODE_INVISIBLE);
-        }
-    }
 
     private static void processUmodeRegistered(Client user, Flagable target, boolean adding) {
 
@@ -136,6 +153,10 @@ public class Mode {
         }
     }
 
+    private static void processUmodeAway(Client user) {
+
+        user.sendStandardFormat(Reply.ERR_CANTSET.format(user.getNickname(), UMODE_AWAY));
+    }
 
 
 
@@ -150,6 +171,15 @@ public class Mode {
         defaultAddCmode(user, target, CMODE_INVITEONLY, null, adding);
     }
 
+
+    private static void defaultAddUmode(Flagable target, char flag, String param, boolean adding) {
+
+        if (adding) {
+            target.addFlag(flag, param);
+        } else {
+            target.removeFlag(flag);
+        }
+    }
 
     private static void defaultAddCmode(Client user, Channel target, char flag, String param, boolean adding) {
 
@@ -173,9 +203,12 @@ public class Mode {
             target.removeFlag(flag);
         }
 
-        reply = Reply.RPL_CHANNELMODEIS.format(user.getNickname(), target.getName(),
-                                                   target.flags(), target.flagParams());
+        //reply = Reply.RPL_CHANNELMODEIS.format(user.getNickname(), target.getName(),
+        //                                           target.flags(), target.flagParams());
 
-        // TODO figure out mode format for channel notifications
+        char marker = (adding) ? '+' : '-';
+        String broadcastParam = (param == null) ? "" : param;
+        target.sendFromClient(user, Command.MODE.format(target.getName(), marker, flag, broadcastParam));
     }
+
 }
