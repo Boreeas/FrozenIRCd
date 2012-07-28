@@ -43,10 +43,11 @@ public class Mode {
     //</editor-fold>
 
     //<editor-fold defaultstate="collapsed" desc="cmodes">
-    public static final String CMODES = "is";
+    public static final String CMODES = "bis";
 
-    public static final char CMODE_SECRET = 's';
+    public static final char CMODE_BANNED     = 'b';
     public static final char CMODE_INVITEONLY = 'i';
+    public static final char CMODE_SECRET     = 's';
     //</editor-fold>
 
 
@@ -169,6 +170,16 @@ public class Mode {
     private static void processCmodeInviteOnly(Client user, Channel target, boolean adding) {
 
         defaultAddCmode(user, target, CMODE_INVITEONLY, null, adding);
+    }
+
+    private static int processCmodeBanned(Client user, Channel target, boolean adding, String[] args, int argIndex) {
+
+        // TODO implementation of +b
+        if (argIndex >= args.length) {
+
+        }
+
+        return 0;
     }
 
 

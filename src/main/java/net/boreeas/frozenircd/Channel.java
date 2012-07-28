@@ -22,6 +22,8 @@ import java.util.Set;
 import net.boreeas.frozenircd.command.Command;
 import net.boreeas.frozenircd.command.Mode;
 import net.boreeas.frozenircd.command.Reply;
+import net.boreeas.frozenircd.config.ConfigData;
+import net.boreeas.frozenircd.config.ConfigKey;
 import net.boreeas.frozenircd.connection.Connection;
 import net.boreeas.frozenircd.utils.Filter;
 import net.boreeas.frozenircd.connection.client.Client;
@@ -61,11 +63,12 @@ public class Channel implements Flagable {
      */
     private final Map<Character, String> channelmodes = new HashMap<>();
 
-    private final Set<String> ops = new HashSet<>();
-    private final Set<String> voiced = new HashSet<>();
-    private final Set<String> muted = new HashSet<>();
-    private final Set<String> banned = new HashSet<>();
-    private final Set<String> invited = new HashSet<>();
+    private final Set<ModeListEntry> ops = new HashSet<>();
+    private final Set<ModeListEntry> voiced = new HashSet<>();
+    private final Set<ModeListEntry> muted = new HashSet<>();
+    private final Set<ModeListEntry> banned = new HashSet<>();
+    private final Set<ModeListEntry> invited = new HashSet<>();
+    private final Set<ModeListEntry> excepted = new HashSet<>();
 
     /**
      * The clients that have currently joined the room.
@@ -134,7 +137,7 @@ public class Channel implements Flagable {
     public void joinChannel(final Client client) {
 
         if (isEmpty()) {
-            op(client);
+            op(client.getHostmask(), ConfigData.getFirstConfigOption(ConfigKey.HOST));
         }
 
         synchronized (clientLock) {
@@ -314,10 +317,14 @@ public class Channel implements Flagable {
         return checkAccess(invited, client.getNickname());
     }
 
-    private synchronized boolean checkAccess(Set<String> access, String mask) {
+    public boolean isExcepted(Client client) {
+        return checkAccess(excepted, client.getHostmask());
+    }
 
-        for (String accessMask: access) {
-            if (PatternMatcher.matchGlob(accessMask, mask)) {
+    private synchronized boolean checkAccess(Set<ModeListEntry> access, String mask) {
+
+        for (ModeListEntry entry: access) {
+            if (PatternMatcher.matchGlob(entry.entry, mask)) {
                 return true;
             }
         }
@@ -325,48 +332,52 @@ public class Channel implements Flagable {
         return false;
     }
 
-    public void op(Client client) {
-        op(client.getHostmask());
-    }
-
-    public synchronized void op(String mask) {
-        ops.add(mask);
+    public synchronized void op(String mask, String issuerMask) {
+        ops.add(new ModeListEntry(mask, issuerMask));
     }
 
     public synchronized void deop(String mask) {
-        ops.remove(mask);
+        ops.remove(new ModeListEntry(mask, mask));
     }
 
-    public synchronized void voice(String mask) {
-        voiced.add(mask);
+    public synchronized void voice(String mask, String issuerMask) {
+        voiced.add(new ModeListEntry(mask, issuerMask));
     }
 
     public synchronized void devoice(String mask) {
-        voiced.remove(mask);
+        voiced.remove(new ModeListEntry(mask, mask));
     }
 
-    public synchronized void mute(String mask) {
-        muted.add(mask);
+    public synchronized void mute(String mask, String issuerMask) {
+        muted.add(new ModeListEntry(mask, issuerMask));
     }
 
     public synchronized void unmute(String mask) {
-        muted.remove(mask);
+        muted.remove(new ModeListEntry(mask, mask));
     }
 
-    public synchronized void ban(String mask) {
-        banned.add(mask);
+    public synchronized void ban(String mask, String issuerMask) {
+        banned.add(new ModeListEntry(mask, issuerMask));
     }
 
     public synchronized void unban(String mask) {
-        banned.remove(mask);
+        banned.remove(new ModeListEntry(mask, mask));
     }
 
-    public synchronized void invite(String nick) {
-        invited.add(nick);
+    public synchronized void invite(String nick, String issuerMask) {
+        invited.add(new ModeListEntry(nick, issuerMask));
     }
 
     public synchronized void uninvite(String nick) {
-        invited.remove(nick);
+        invited.remove(new ModeListEntry(nick, nick));
+    }
+
+    public synchronized void except(String mask, String issuerMask) {
+        excepted.add(new ModeListEntry(mask, issuerMask));
+    }
+
+    public synchronized void unexcept(String mask) {
+        invited.remove(new ModeListEntry(mask, mask));
     }
 
 

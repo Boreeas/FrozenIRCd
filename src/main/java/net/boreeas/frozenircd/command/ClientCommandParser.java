@@ -67,7 +67,6 @@ public class ClientCommandParser {
 
         command = command.toUpperCase();
 
-
         switch (command) {
 
             case PING:
@@ -412,6 +411,7 @@ public class ClientCommandParser {
         }
     }
 
+    @SuppressWarnings("unchecked")
     private static void onJoinCommand(Client client, String[] args) {
 
         if (!client.registrationCompleted()) {
@@ -424,8 +424,21 @@ public class ClientCommandParser {
             return;
         }
 
+        boolean partAll = false;
+
         for (String chan: args[0].split(",")) {
-            joinSingleChannel(client, chan);
+
+            if (chan.equals("0")) {
+                partAll = true;
+            } else {
+                joinSingleChannel(client, chan);
+            }
+        }
+
+        if (partAll) {
+            for (String channel: client.getChannels(SharedData.passAllFilter)) {
+                partSingleChannel(client, channel, client.getNickname());
+            }
         }
     }
 
@@ -517,6 +530,7 @@ public class ClientCommandParser {
 
         if (args.length == 0) {
 
+            @SuppressWarnings("unchecked")
             Set<Channel> results = ChannelPool.getChannels(SharedData.passAllFilter);
             for (Channel chan: results) {
 
@@ -533,7 +547,7 @@ public class ClientCommandParser {
                 if (chan == null) continue;
 
                 String names = (client.isInChannel(args[0])) ? chan.names() : chan.visibleNames();
-                if (names.isEmpty()) continue   ;
+                if (names.isEmpty()) continue;
 
                 client.sendStandardFormat(Reply.RPL_NAMREPLY.format(client.getNickname(), '=', chan.getName(), names));
                 client.sendStandardFormat(Reply.RPL_ENDOFNAMES.format(client.getNickname(), chan.getName()));
@@ -636,7 +650,7 @@ public class ClientCommandParser {
                 return;
             }
 
-            chan.invite(target.getNickname());
+            chan.invite(target.getNickname(), client.getDisplayHostmask());
         }
 
         if (target.hasFlag(Mode.UMODE_AWAY)) {
@@ -703,6 +717,7 @@ public class ClientCommandParser {
         return false;
     }
 
+    @SuppressWarnings("unchecked")
     private static boolean isNameInUse(Client client, String name) {
 
         for (Connection conn : ConnectionPool.ALL.getConnections(SharedData.passAllFilter)) {

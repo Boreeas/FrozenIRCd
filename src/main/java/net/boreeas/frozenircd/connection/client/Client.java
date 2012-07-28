@@ -32,6 +32,7 @@ import net.boreeas.frozenircd.command.Mode;
 import net.boreeas.frozenircd.config.ConfigData;
 import net.boreeas.frozenircd.config.ConfigKey;
 import net.boreeas.frozenircd.command.Reply;
+import net.boreeas.frozenircd.utils.Filter;
 import net.boreeas.frozenircd.utils.SharedData;
 import net.boreeas.frozenircd.connection.Connection;
 import net.boreeas.frozenircd.utils.StringUtils;
@@ -362,7 +363,7 @@ public class Client extends Connection implements Flagable {
      * this change visible.
      * @param channel The name of the channel to add
      */
-    public void addChannel(String channel) {
+    public synchronized void addChannel(String channel) {
 
         channels.add(channel);
     }
@@ -373,7 +374,7 @@ public class Client extends Connection implements Flagable {
      * make this change visible.
      * @param channel The name of the channel to remove
      */
-    public void removeChannel(String channel) {
+    public synchronized void removeChannel(String channel) {
 
         channels.remove(SharedData.toLowerCase(channel));
     }
@@ -381,6 +382,8 @@ public class Client extends Connection implements Flagable {
     /**
      * Tells whether a client is currently in a channel.
      * @param channel The name of the channel to check
+     * @return <code>true</code> if the client is in the given
+     * channel, <code>false</code> otherwise.
      */
     public boolean isInChannel(String channel) {
 
@@ -445,5 +448,18 @@ public class Client extends Connection implements Flagable {
     public String getParam(char flag) {
 
         return flags.get(flag);
+    }
+
+    public synchronized Set<String> getChannels(Filter<String> filter) {
+
+        Set<String> results = new HashSet<>();
+
+        for (String chan: channels) {
+            if (filter.pass(chan)) {
+                results.add(chan);
+            }
+        }
+
+        return results;
     }
 }
