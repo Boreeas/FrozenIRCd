@@ -16,6 +16,7 @@
 package net.boreeas.frozenircd;
 
 import java.util.Objects;
+import net.boreeas.frozenircd.utils.SharedData;
 
 /**
  *
@@ -28,8 +29,8 @@ public class ModeListEntry {
     private final long time;
 
     public ModeListEntry(String entry, String issuerMask) {
-        this.entry = entry.toLowerCase();
-        this.issuerMask = issuerMask.toLowerCase();
+        this.entry = SharedData.toLowerCase(entry);
+        this.issuerMask = SharedData.toLowerCase(entry);
         this.time = System.currentTimeMillis();
     }
 

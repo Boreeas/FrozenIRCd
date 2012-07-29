@@ -129,6 +129,18 @@ public enum Reply {
     RPL_ENDOFNAMES          ("366 %s %s: End of NAMES", 2),
 
     /**
+     * Sent as part of a ban listing for a channel.<br />
+     * Parameters: nick, channel, ban list entry
+     */
+    RPL_BANLIST             ("367 %s %s :%s", 3),
+
+    /**
+     * Sent to indicate the end of a ban listing.<br />
+     * Parameters: nick, channel
+     */
+    RPL_ENDOFBANLIST        ("368 %s %s :End of ban list", 2),
+
+    /**
      * Sent when a completes registration containing the MOTD of the server.<br />
      * Parameters: nick, (part of the) MOTD
      */
@@ -171,6 +183,17 @@ public enum Reply {
      * Parameters: nick, channel
      */
     ERR_NOSUCHCHANNEL       ("403 %s %s :No such channel", 2),
+
+    /**
+     * Sent if a client attempts to message a channel but is unable to do so.<br />
+     * Parameters: nick, channel
+     */
+    ERR_CANNOTSENDTOCHANNEL ("404 %s %s :Cannot send to channel", 2),
+
+    /**
+     * A command targets too many users or channels
+     */
+    ERR_TOOMANYTARGETS      ("407 %s %s :Too many targets", 2),
 
     /**
      * Sent if a command by a client was not recognized.<br />

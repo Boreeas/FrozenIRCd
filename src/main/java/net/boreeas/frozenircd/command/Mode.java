@@ -43,10 +43,11 @@ public class Mode {
     //</editor-fold>
 
     //<editor-fold defaultstate="collapsed" desc="cmodes">
-    public static final String CMODES = "bis";
+    public static final String CMODES = "bims";
 
     public static final char CMODE_BANNED     = 'b';
     public static final char CMODE_INVITEONLY = 'i';
+    public static final char CMODE_MODERATED  = 'm';
     public static final char CMODE_SECRET     = 's';
     //</editor-fold>
 
@@ -177,9 +178,31 @@ public class Mode {
         // TODO implementation of +b
         if (argIndex >= args.length) {
 
+            for (String banListEntry: target.banList()) {
+                String reply = Reply.RPL_BANLIST.format(user.getNickname(), target.getName(), banListEntry);
+                user.sendStandardFormat(reply);
+            }
+
+            user.sendStandardFormat(Reply.RPL_ENDOFBANLIST.format(user.getNickname(), target.getName()));
+            return 0;
         }
 
-        return 0;
+        if (!target.isOp(user)) {
+
+            user.sendStandardFormat(Reply.ERR_CHANOPRIVSNEEDED.format(user.getNickname(), target.getName()));
+        } else {
+
+            if (adding) {
+                target.ban(args[argIndex], user.getDisplayHostmask());
+            } else {
+                target.unban(args[argIndex]);
+            }
+
+            char marker = (adding) ? '+' : '-';
+            target.sendFromClient(user, Command.MODE.format(target.getName(), marker, CMODE_BANNED, args[argIndex]));
+        }
+
+        return 1;
     }
 
 
@@ -213,9 +236,6 @@ public class Mode {
         } else {
             target.removeFlag(flag);
         }
-
-        //reply = Reply.RPL_CHANNELMODEIS.format(user.getNickname(), target.getName(),
-        //                                           target.flags(), target.flagParams());
 
         char marker = (adding) ? '+' : '-';
         String broadcastParam = (param == null) ? "" : param;

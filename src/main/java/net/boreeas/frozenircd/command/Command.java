@@ -77,7 +77,13 @@ public enum Command {
      * Sent when a client is kicked from a room.<br />
      * Parameters: nick, channel, reason
      */
-    KICK                    ("KICK %s %s :%s", 3);
+    KICK                    ("KICK %s %s :%s", 3),
+
+    /**
+     * Private message to a channel.
+     * Parameters: channel, message
+     */
+    PRIVMSG                 ("PRIVMSG %s :%s", 2);
     //</editor-fold>
 
 

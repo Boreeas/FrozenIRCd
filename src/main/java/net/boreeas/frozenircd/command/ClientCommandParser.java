@@ -15,6 +15,7 @@
  */
 package net.boreeas.frozenircd.command;
 
+import com.sun.tracing.dtrace.ArgsAttributes;
 import java.security.NoSuchAlgorithmException;
 import java.util.Set;
 import net.boreeas.frozenircd.Channel;
@@ -31,6 +32,8 @@ import net.boreeas.frozenircd.utils.PatternMatcher;
 import net.boreeas.frozenircd.utils.SharedData;
 import net.boreeas.frozenircd.utils.StringUtils;
 
+import org.ietf.jgss.ChannelBinding;
+import sun.awt.GlobalCursorManager;
 import static net.boreeas.frozenircd.command.Reply.*;
 import static net.boreeas.frozenircd.config.ConfigData.*;
 import static net.boreeas.frozenircd.config.ConfigKey.*;
@@ -507,7 +510,7 @@ public class ClientCommandParser {
         }
     }
 
-    private static void onPrivmsgCommand(Client client, String[] args) {
+    private static void onPrivmsgCommand(Client client, final String[] args) {
 
         if (!client.registrationCompleted()) {
             return;
@@ -519,7 +522,16 @@ public class ClientCommandParser {
             return;
         }
 
-        //TODO Implementation of PRIVMSG
+        if (Channel.isChanTypeSupported(args[0].charAt(0))) {
+            privmsgChannel(client, args[0], args[1]);
+        } else {
+            privmsgConnections(client, ConnectionPool.ALL.getConnections(new Filter<Connection>() {
+                @Override
+                public boolean pass(Connection instance) {
+                    return PatternMatcher.matchGlob(args[0], instance.getCommonName());
+                }
+            }), args[1]);
+        }
     }
 
     private static void onNamesCommand(Client client, String[] args) {
@@ -820,5 +832,38 @@ public class ClientCommandParser {
 
         chan.kick(client, target, reason);
         target.removeChannel(channel);
+    }
+
+    private static void privmsgChannel(final Client client, String chanName, String message) {
+
+        Channel target = ChannelPool.getChannel(chanName);
+
+        if (target == null) {
+            client.sendStandardFormat(ERR_NOSUCHCHANNEL.format(client.getNickname(), chanName));
+            return;
+        }
+
+        if (!client.isInChannel(chanName)
+            || (target.hasFlag(Mode.CMODE_MODERATED) && !target.isVoiced(client))
+            || (target.isMuted(client) && !target.isVoiced(client))) {
+
+            client.sendStandardFormat(ERR_CANNOTSENDTOCHANNEL.format(client.getNickname(), chanName));
+            return;
+        }
+
+        target.sendFromClient(client, Command.PRIVMSG.format(chanName, message), new Filter<Connection>() {
+
+            @Override
+            public boolean pass(Connection instance) {
+                return instance != client;
+            }
+        });
+    }
+
+    private static void privmsgConnections(Client client, Set<Connection> targets, String message) {
+
+        if (targets.size() > 1) {
+            
+        }
     }
 }

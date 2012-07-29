@@ -161,17 +161,25 @@ public class Channel implements Flagable {
 
         sendFromClient(client, Command.PART.format(name, reason));
 
-        synchronized (clientLock) {
-            clients.remove(client);
-        }
+        removeUser(client);
     }
 
     public void kick(Client issuer, Client target, String reason) {
 
         sendFromClient(issuer, Command.KICK.format(name, target.getNickname(), reason));
 
+        removeUser(target);
+    }
+
+    private void removeUser(Client target) {
+
         synchronized (clientLock) {
             clients.remove(target);
+        }
+
+        synchronized (this) {
+            deop(target.getHostmask());
+            devoice(target.getHostmask());
         }
     }
 
@@ -302,11 +310,11 @@ public class Channel implements Flagable {
     }
 
     public boolean isVoiced(Client client) {
-        return checkAccess(voiced, client.getHostmask());
+        return checkAccess(voiced, client.getHostmask()) || isOp(client); // Op implies voice
     }
 
     public boolean isMuted(Client client) {
-        return checkAccess(muted, client.getHostmask());
+        return checkAccess(muted, client.getHostmask()) || isBanned(client); // Ban implies mute
     }
 
     public boolean isBanned(Client client) {
@@ -378,6 +386,41 @@ public class Channel implements Flagable {
 
     public synchronized void unexcept(String mask) {
         invited.remove(new ModeListEntry(mask, mask));
+    }
+
+    public Set<String> operList() {
+        return list(ops);
+    }
+
+    public Set<String> voiceList() {
+        return list(voiced);
+    }
+
+    public Set<String> inviteList() {
+        return list(invited);
+    }
+
+    public Set<String> muteList() {
+        return list(muted);
+    }
+
+    public Set<String> banList() {
+        return list(banned);
+    }
+
+    public Set<String> exceptList() {
+        return list(excepted);
+    }
+
+    private synchronized Set<String> list(Set<ModeListEntry> accessSet) {
+
+        Set<String> res = new HashSet<>();
+
+        for (ModeListEntry entry: accessSet) {
+            res.add(entry.format());
+        }
+
+        return res;
     }
 
 
