@@ -80,10 +80,16 @@ public enum Command {
     KICK                    ("KICK %s %s :%s", 3),
 
     /**
-     * Private message to a channel.
-     * Parameters: channel, message
+     * Private message to a channel or user.
+     * Parameters: target, message
      */
-    PRIVMSG                 ("PRIVMSG %s :%s", 2);
+    PRIVMSG                 ("PRIVMSG %s :%s", 2),
+
+    /**
+     * Notice to a channel or user.
+     * Parameters: target, message
+     */
+    NOTICE                 ("NOTICE %s :%s", 2);
     //</editor-fold>
 
 

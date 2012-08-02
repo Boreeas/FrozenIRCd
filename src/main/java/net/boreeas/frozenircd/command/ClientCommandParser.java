@@ -63,6 +63,7 @@ public class ClientCommandParser {
     private static final String TOPIC = "TOPIC";
     private static final String NAMES = "NAMES";
     private static final String INVITE = "INVITE";
+    private static final String NOTICE = "NOTICE";
     private static final String PRIVMSG = "PRIVMSG";
 
 
@@ -140,6 +141,9 @@ public class ClientCommandParser {
             case KICK:
                 onKickCommand(client, args);
                 break;
+
+            case NOTICE:
+                onNoticeCommand(client, args);
 
             default:
                 onUnknownCommand(client, command);
@@ -529,6 +533,19 @@ public class ClientCommandParser {
         }
     }
 
+    private static void onNoticeCommand(Client client, final String[] args) {
+
+        if (!client.registrationCompleted() || args.length < 2 || args[1].isEmpty()) {
+            return;
+        }
+
+        if (Channel.isChanTypeSupported(args[0].charAt(0))) {
+            privmsgChannel(client, args[0], args[1]);
+        } else {
+            privmsgConnections(client, args[0], args[1]);
+        }
+    }
+
     private static void onNamesCommand(Client client, String[] args) {
 
         if (!client.registrationCompleted()) {
@@ -855,6 +872,30 @@ public class ClientCommandParser {
         });
     }
 
+    private static void noticeChannel(final Client client, String chanName, String message) {
+
+        Channel target = ChannelPool.getChannel(chanName);
+
+        if (target == null) {
+            return; // NOTICE - no error reply
+        }
+
+        if (!client.isInChannel(chanName)
+            || (target.hasFlag(Mode.CMODE_MODERATED) && !target.isVoiced(client))
+            || (target.isMuted(client) && !target.isVoiced(client))) {
+
+            return; // NOTICE - no error reply
+        }
+
+        target.sendFromClient(client, Command.NOTICE.format(chanName, message), new Filter<Connection>() {
+
+            @Override
+            public boolean pass(Connection instance) {
+                return instance != client;
+            }
+        });
+    }
+
     private static void privmsgConnections(Client client, final String targetName, String message) {
 
         Set<Connection> targets = ConnectionPool.ALL.getConnections(new Filter<Connection>() {
@@ -882,6 +923,28 @@ public class ClientCommandParser {
 
         if (!foundMatch) {
             client.sendStandardFormat(ERR_NOSUCHNICK.format(client.getNickname(), targetName));
+        }
+    }
+
+    private static void noticeConnections(Client client, final String targetName, String message) {
+
+        Set<Connection> targets = ConnectionPool.ALL.getConnections(new Filter<Connection>() {
+
+            @Override
+            public boolean pass(Connection instance) {
+                return PatternMatcher.matchGlob(targetName, instance.getCommonName());
+            }
+        });
+
+        if (targets.size() > 1) {
+            return; // NOTICE - no error reply
+        }
+
+        for (Connection conn: targets) {
+            if (conn instanceof Client) {
+
+                ((Client) conn).sendStandardFormat(Command.NOTICE.format(targetName, message));
+            }
         }
     }
 }
