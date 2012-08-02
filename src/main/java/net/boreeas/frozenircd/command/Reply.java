@@ -203,6 +203,12 @@ public enum Reply {
     ERR_UNKNOWNCOMMAND      ("421 %s %s :Unknown command", 2),
 
     /**
+     * This server does not have any motd saved.<br />
+     * Parameters: nick
+     */
+    ERR_NOMOTD              ("422 %s :No MOTD for this server", 1),
+
+    /**
      * Sent whenever a command expects a nickname as a parameter but is not given any.<br />
      * Parameters: nick
      */

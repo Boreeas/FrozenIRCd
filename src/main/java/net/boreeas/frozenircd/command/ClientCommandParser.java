@@ -60,6 +60,7 @@ public class ClientCommandParser {
     private static final String PART = "PART";
     private static final String LIST = "LIST";
     private static final String KICK = "KICK";
+    private static final String MOTD = "MOTD";
     private static final String TOPIC = "TOPIC";
     private static final String NAMES = "NAMES";
     private static final String INVITE = "INVITE";
@@ -144,6 +145,11 @@ public class ClientCommandParser {
 
             case NOTICE:
                 onNoticeCommand(client, args);
+                break;
+
+            case MOTD:
+                onMotdCommand(client, args);
+                break;
 
             default:
                 onUnknownCommand(client, command);
@@ -721,6 +727,18 @@ public class ClientCommandParser {
         }
     }
 
+    private static void onMotdCommand(Client client, String[] args) {
+
+        if (!client.registrationCompleted()) {
+            return;
+        }
+
+        if (SharedData.motd == null) {
+            client.sendStandardFormat(ERR_NOMOTD.format(client.getNickname()));
+        } else {
+            client.sendMotd();
+        }
+    }
 
     private static void onUnknownCommand(Client client, String command) {
 

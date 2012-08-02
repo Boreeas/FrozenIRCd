@@ -134,6 +134,17 @@ public class Client extends Connection implements Flagable {
         send(String.format(":%s PRIVMSG %s :%s", senderHostmask, receiver, message));
     }
 
+    public void sendMotd() {
+
+        sendStandardFormat(Reply.RPL_MOTDSTART.format(nickname));
+
+        for (String part: SharedData.motd.split("\n")) {
+            sendStandardFormat(Reply.RPL_MOTD.format(nickname, part));
+        }
+
+        sendStandardFormat(Reply.RPL_ENDOFMOTD.format(nickname));
+    }
+
     /**
      * Kills the connection to the user. Equivalent to
      * calling <code>disconnect("Killed: " + reason)</code>.
@@ -214,10 +225,12 @@ public class Client extends Connection implements Flagable {
 
     public String getDisplayHostmask() {
 
-        String hostmask = nickname + "!";
-        if (!receivedIdentResponse()) hostmask += '~';
+        String hostMaskPrefix = nickname + "!";
+        if (!receivedIdentResponse()) {
+            hostMaskPrefix += '~';
+        }
 
-        return hostmask + username + "@" + hostname;
+        return hostMaskPrefix + username + "@" + hostname;
     }
 
     /**
@@ -340,16 +353,9 @@ public class Client extends Connection implements Flagable {
         sendStandardFormat(Reply.RPL_MYINFO.format(nickname));
         sendStandardFormat(Reply.RPL_ISUPPORT.format(nickname));
 
-        sendStandardFormat(Reply.RPL_MOTDSTART.format(nickname));
-
         if (SharedData.motd != null) {
-
-            for (String part: SharedData.motd.split("\n")) {
-                sendStandardFormat(Reply.RPL_MOTD.format(nickname, part));
-            }
+            sendMotd();
         }
-
-        sendStandardFormat(Reply.RPL_ENDOFMOTD.format(nickname));
     }
 
 
