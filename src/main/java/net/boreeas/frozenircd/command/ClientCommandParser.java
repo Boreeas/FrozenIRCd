@@ -525,12 +525,7 @@ public class ClientCommandParser {
         if (Channel.isChanTypeSupported(args[0].charAt(0))) {
             privmsgChannel(client, args[0], args[1]);
         } else {
-            privmsgConnections(client, ConnectionPool.ALL.getConnections(new Filter<Connection>() {
-                @Override
-                public boolean pass(Connection instance) {
-                    return PatternMatcher.matchGlob(args[0], instance.getCommonName());
-                }
-            }), args[1]);
+            privmsgConnections(client, args[0], args[1]);
         }
     }
 
@@ -860,10 +855,33 @@ public class ClientCommandParser {
         });
     }
 
-    private static void privmsgConnections(Client client, Set<Connection> targets, String message) {
+    private static void privmsgConnections(Client client, final String targetName, String message) {
+
+        Set<Connection> targets = ConnectionPool.ALL.getConnections(new Filter<Connection>() {
+
+            @Override
+            public boolean pass(Connection instance) {
+                return PatternMatcher.matchGlob(targetName, instance.getCommonName());
+            }
+        });
 
         if (targets.size() > 1) {
-            
+            client.sendStandardFormat(ERR_TOOMANYTARGETS.format(client.getNickname(), targetName));
+            return;
+        }
+
+        boolean foundMatch = false;
+        for (Connection conn: targets) {
+
+            if (conn instanceof Client) {
+
+                foundMatch = true;
+                ((Client) conn).sendStandardFormat(Command.PRIVMSG.format(targetName, message));
+            }
+        }
+
+        if (!foundMatch) {
+            client.sendStandardFormat(ERR_NOSUCHNICK.format(client.getNickname(), targetName));
         }
     }
 }

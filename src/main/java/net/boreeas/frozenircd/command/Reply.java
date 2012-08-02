@@ -191,7 +191,8 @@ public enum Reply {
     ERR_CANNOTSENDTOCHANNEL ("404 %s %s :Cannot send to channel", 2),
 
     /**
-     * A command targets too many users or channels
+     * A command targets too many users or channels.<br />
+     * Parameters: nick, target string
      */
     ERR_TOOMANYTARGETS      ("407 %s %s :Too many targets", 2),
 
