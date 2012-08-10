@@ -15,7 +15,6 @@
  */
 package net.boreeas.frozenircd.command;
 
-import com.sun.tracing.dtrace.ArgsAttributes;
 import java.security.NoSuchAlgorithmException;
 import java.util.Set;
 import net.boreeas.frozenircd.Channel;
@@ -32,8 +31,6 @@ import net.boreeas.frozenircd.utils.PatternMatcher;
 import net.boreeas.frozenircd.utils.SharedData;
 import net.boreeas.frozenircd.utils.StringUtils;
 
-import org.ietf.jgss.ChannelBinding;
-import sun.awt.GlobalCursorManager;
 import static net.boreeas.frozenircd.command.Reply.*;
 import static net.boreeas.frozenircd.config.ConfigData.*;
 import static net.boreeas.frozenircd.config.ConfigKey.*;
@@ -533,22 +530,28 @@ public class ClientCommandParser {
         }
 
         if (Channel.isChanTypeSupported(args[0].charAt(0))) {
-            privmsgChannel(client, args[0], args[1]);
+            messageChannel(client, args[0], args[1], Command.PRIVMSG);
         } else {
-            privmsgConnections(client, args[0], args[1]);
+            messageConnections(client, args[0], args[1], Command.PRIVMSG);
         }
     }
 
     private static void onNoticeCommand(Client client, final String[] args) {
 
-        if (!client.registrationCompleted() || args.length < 2 || args[1].isEmpty()) {
+        if (!client.registrationCompleted()) {
+            return;
+        }
+
+        if (args.length < 2 || args[1].isEmpty()) {
+            client.sendStandardFormat(Reply.ERR_NEEDMOREPARAMS.format(client.getNickname(),
+                                                                      PRIVMSG, "<target> <message>"));
             return;
         }
 
         if (Channel.isChanTypeSupported(args[0].charAt(0))) {
-            privmsgChannel(client, args[0], args[1]);
+            messageChannel(client, args[0], args[1], Command.NOTICE);
         } else {
-            privmsgConnections(client, args[0], args[1]);
+            messageConnections(client, args[0], args[1], Command.NOTICE);
         }
     }
 
@@ -864,7 +867,7 @@ public class ClientCommandParser {
         target.removeChannel(channel);
     }
 
-    private static void privmsgChannel(final Client client, String chanName, String message) {
+    private static void messageChannel(final Client client, String chanName, String message, Command command) {
 
         Channel target = ChannelPool.getChannel(chanName);
 
@@ -881,7 +884,7 @@ public class ClientCommandParser {
             return;
         }
 
-        target.sendFromClient(client, Command.PRIVMSG.format(chanName, message), new Filter<Connection>() {
+        target.sendFromClient(client, command.format(chanName, message), new Filter<Connection>() {
 
             @Override
             public boolean pass(Connection instance) {
@@ -890,31 +893,7 @@ public class ClientCommandParser {
         });
     }
 
-    private static void noticeChannel(final Client client, String chanName, String message) {
-
-        Channel target = ChannelPool.getChannel(chanName);
-
-        if (target == null) {
-            return; // NOTICE - no error reply
-        }
-
-        if (!client.isInChannel(chanName)
-            || (target.hasFlag(Mode.CMODE_MODERATED) && !target.isVoiced(client))
-            || (target.isMuted(client) && !target.isVoiced(client))) {
-
-            return; // NOTICE - no error reply
-        }
-
-        target.sendFromClient(client, Command.NOTICE.format(chanName, message), new Filter<Connection>() {
-
-            @Override
-            public boolean pass(Connection instance) {
-                return instance != client;
-            }
-        });
-    }
-
-    private static void privmsgConnections(Client client, final String targetName, String message) {
+    private static void messageConnections(Client client, final String targetName, String message, Command command) {
 
         Set<Connection> targets = ConnectionPool.ALL.getConnections(new Filter<Connection>() {
 
@@ -935,7 +914,7 @@ public class ClientCommandParser {
             if (conn instanceof Client) {
 
                 foundMatch = true;
-                ((Client) conn).sendStandardFormat(Command.PRIVMSG.format(targetName, message));
+                ((Client) conn).sendStandardFormat(command.format(targetName, message));
             }
         }
 
@@ -944,25 +923,4 @@ public class ClientCommandParser {
         }
     }
 
-    private static void noticeConnections(Client client, final String targetName, String message) {
-
-        Set<Connection> targets = ConnectionPool.ALL.getConnections(new Filter<Connection>() {
-
-            @Override
-            public boolean pass(Connection instance) {
-                return PatternMatcher.matchGlob(targetName, instance.getCommonName());
-            }
-        });
-
-        if (targets.size() > 1) {
-            return; // NOTICE - no error reply
-        }
-
-        for (Connection conn: targets) {
-            if (conn instanceof Client) {
-
-                ((Client) conn).sendStandardFormat(Command.NOTICE.format(targetName, message));
-            }
-        }
-    }
 }
