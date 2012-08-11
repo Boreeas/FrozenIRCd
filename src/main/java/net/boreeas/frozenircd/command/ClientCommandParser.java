@@ -29,6 +29,7 @@ import net.boreeas.frozenircd.utils.Filter;
 import net.boreeas.frozenircd.utils.HashUtils;
 import net.boreeas.frozenircd.utils.PatternMatcher;
 import net.boreeas.frozenircd.utils.SharedData;
+import net.boreeas.frozenircd.utils.Stats;
 import net.boreeas.frozenircd.utils.StringUtils;
 
 import static net.boreeas.frozenircd.command.Reply.*;
@@ -60,6 +61,7 @@ public class ClientCommandParser {
     private static final String MOTD = "MOTD";
     private static final String TOPIC = "TOPIC";
     private static final String NAMES = "NAMES";
+    private static final String LUSERS = "LUSERS";
     private static final String INVITE = "INVITE";
     private static final String NOTICE = "NOTICE";
     private static final String PRIVMSG = "PRIVMSG";
@@ -121,7 +123,11 @@ public class ClientCommandParser {
                 break;
 
             case PRIVMSG:
-                onPrivmsgCommand(client, args);
+                onMessageCommand(client, args, Command.PRIVMSG);
+                break;
+
+            case NOTICE:
+                onMessageCommand(client, args, Command.NOTICE);
                 break;
 
             case NAMES:
@@ -140,12 +146,12 @@ public class ClientCommandParser {
                 onKickCommand(client, args);
                 break;
 
-            case NOTICE:
-                onNoticeCommand(client, args);
+            case MOTD:
+                onMotdCommand(client);
                 break;
 
-            case MOTD:
-                onMotdCommand(client, args);
+            case LUSERS:
+                onLusersCommand(client);
                 break;
 
             default:
@@ -517,7 +523,7 @@ public class ClientCommandParser {
         }
     }
 
-    private static void onPrivmsgCommand(Client client, final String[] args) {
+    private static void onMessageCommand(Client client, final String[] args, Command cmd) {
 
         if (!client.registrationCompleted()) {
             return;
@@ -525,33 +531,14 @@ public class ClientCommandParser {
 
         if (args.length < 2 || args[1].isEmpty()) {
             client.sendStandardFormat(Reply.ERR_NEEDMOREPARAMS.format(client.getNickname(),
-                                                                      PRIVMSG, "<target> <message>"));
+                                                                      cmd, "<target> <message>"));
             return;
         }
 
         if (Channel.isChanTypeSupported(args[0].charAt(0))) {
-            messageChannel(client, args[0], args[1], Command.PRIVMSG);
+            messageChannel(client, args[0], args[1], cmd);
         } else {
-            messageConnections(client, args[0], args[1], Command.PRIVMSG);
-        }
-    }
-
-    private static void onNoticeCommand(Client client, final String[] args) {
-
-        if (!client.registrationCompleted()) {
-            return;
-        }
-
-        if (args.length < 2 || args[1].isEmpty()) {
-            client.sendStandardFormat(Reply.ERR_NEEDMOREPARAMS.format(client.getNickname(),
-                                                                      PRIVMSG, "<target> <message>"));
-            return;
-        }
-
-        if (Channel.isChanTypeSupported(args[0].charAt(0))) {
-            messageChannel(client, args[0], args[1], Command.NOTICE);
-        } else {
-            messageConnections(client, args[0], args[1], Command.NOTICE);
+            messageConnections(client, args[0], args[1], cmd);
         }
     }
 
@@ -730,7 +717,7 @@ public class ClientCommandParser {
         }
     }
 
-    private static void onMotdCommand(Client client, String[] args) {
+    private static void onMotdCommand(Client client) {
 
         if (!client.registrationCompleted()) {
             return;
@@ -742,6 +729,35 @@ public class ClientCommandParser {
             client.sendMotd();
         }
     }
+
+    private static void onLusersCommand(Client client) {
+
+        if (!client.registrationCompleted()) {
+            return;
+        }
+
+        String luserClient = Reply.RPL_LUSERCLIENT.format(client.getNickname(),
+                                                          Stats.NETWORK_VISIBLE.get(),
+                                                          Stats.NETWORK_INVISIBLE.get(),
+                                                          Stats.NETWORK_SERVERS.get());
+        String luserOp = Reply.RPL_LUSEROP.format(client.getNickname(),
+                                                  Stats.OPERATORS.get());
+        String luserUnknown = Reply.RPL_LUSERUNKNOWN.format(client.getNickname(),
+                                                            Stats.NETWORK_UNKNOWN.get());
+        String luserChannels = Reply.RPL_LUSERCHANNELS.format(client.getNickname(),
+                                                              Stats.NETWORK_CHANNELS.get());
+        String luserMe = Reply.RPL_LUSERME.format(client.getNickname(),
+                                                  Stats.LOCAL_USERS.get(),
+                                                  Stats.LOCAL_LINKS.get());
+
+        client.sendStandardFormat(luserClient);
+        client.sendStandardFormat(luserOp);
+        client.sendStandardFormat(luserUnknown);
+        client.sendStandardFormat(luserChannels);
+        client.sendStandardFormat(luserMe);
+    }
+
+
 
     private static void onUnknownCommand(Client client, String command) {
 

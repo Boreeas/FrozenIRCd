@@ -21,17 +21,23 @@ package net.boreeas.frozenircd.utils;
  */
 public enum Stats {
 
-    LUSER_VISIBLE,
-    LUSER_INVISIBLE,
-    LUSER_SERVERS,
-    LUSER_OPS,
-    LUSER_UNKNOWN,
-    LUSER_CHANNELS,
-    LUSER_LOCAL_USERS,
-    LUSER_LOCAL_LINKS;
+    NETWORK_VISIBLE,
+    NETWORK_INVISIBLE,
+    NETWORK_SERVERS(1),
+    OPERATORS,
+    NETWORK_UNKNOWN,
+    NETWORK_CHANNELS,
+    LOCAL_USERS,
+    LOCAL_LINKS;
 
 
     private int value = 0;
+
+    private Stats() {}
+
+    private Stats(int initval) {
+        value = initval;
+    }
 
     public void inc() {
         value++;

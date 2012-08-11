@@ -67,6 +67,36 @@ public enum Reply {
     RPL_UMODEIS             ("221 %s :+%s", 2),
 
     /**
+     * Information about the number of clients attached to the network.<br />
+     * Parameters: nick, num users, num invisible, num servers
+     */
+    RPL_LUSERCLIENT         ("251 %s :There are %s users and %s invisible on %s servers.", 4),
+
+    /**
+     * Information about the number of IRC Operators online.<br />
+     * Parameters: nick, num opers
+     */
+    RPL_LUSEROP             ("252 %s %s :IRC Operators online", 2),
+
+    /**
+     * Information about the number of unknown connections (registration process not completed).<br />
+     * Parameters: nick, num unknown
+     */
+    RPL_LUSERUNKNOWN        ("253 %s %S :Unknown connections", 2),
+
+    /**
+     * Information about the number of channels.<br />
+     * Parameters: nick, num channels
+     */
+    RPL_LUSERCHANNELS       ("254 %s %s :Channels", 2),
+
+    /**
+     * Information about the local number of connections.<br />
+     * Parameters: nick, num clients, num links
+     */
+    RPL_LUSERME             ("255 %s :I have %s clients and %s servers", 3),
+    
+    /**
      * Sent if a notification is sent to a client that is currently away.<br />
      * Parameters: nick, target nick, away message
      */
